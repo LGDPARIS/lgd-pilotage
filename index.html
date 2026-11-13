@@ -1245,7 +1245,18 @@ tr.click{ cursor:pointer; } tr.click:hover td{ background:var(--surface-2); }
     ev.preventDefault();
     var f = ev.target, er = document.getElementById('login-err');
     er.hidden = true;
-    firebase.auth().signInWithEmailAndPassword(f.elements.email.value.trim(), f.elements.password.value).catch(function(){ er.textContent = 'E-mail ou mot de passe incorrect.'; er.hidden = false; });
+    firebase.auth().signInWithEmailAndPassword(f.elements.email.value.trim(), f.elements.password.value).catch(function(e){
+      var c = String((e && e.code) || ''), host = location.hostname, m;
+      if(/invalid-credential|wrong-password|user-not-found|invalid-login/.test(c)) m = 'E-mail ou mot de passe incorrect. Vérifiez le compte dans Firebase, Authentication, onglet Utilisateurs.';
+      else if(/invalid-email/.test(c)) m = 'Cette adresse e-mail n’est pas valide.';
+      else if(/unauthorized-domain/.test(c)) m = 'Cette adresse (' + host + ') n’est pas autorisée dans Firebase : ajoutez « ' + host + ' » dans Authentication, Paramètres, Domaines autorisés.';
+      else if(/operation-not-allowed|configuration-not-found/.test(c)) m = 'La connexion par e-mail n’est pas activée dans Firebase : Authentication, Méthode de connexion, activez « Adresse e-mail/Mot de passe ».';
+      else if(/api-key/.test(c)) m = 'La clé « apiKey » du fichier config.js est incorrecte : recopiez-la depuis Firebase, Paramètres du projet.';
+      else if(/too-many-requests/.test(c)) m = 'Trop de tentatives. Réessayez dans quelques minutes, ou utilisez « Mot de passe oublié ».';
+      else if(/network/.test(c)) m = 'Pas de connexion internet. Vérifiez votre réseau et réessayez.';
+      else m = 'Connexion impossible (' + (c || 'erreur inconnue') + '). Envoyez ce message à Claude pour diagnostic.';
+      er.textContent = m; er.hidden = false;
+    });
   });
   main.addEventListener('change', function(ev){
     if(ev.target.id === 'f-dep'){ S.filter.dep = ev.target.value; render(); }
