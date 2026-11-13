@@ -1,0 +1,1261 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>LGD Paris · Pilotage des excursions</title>
+<script src="config.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+:root{
+  color-scheme: light;
+  --bg:#F2F5F4; --surface:#FFFFFF; --surface-2:#F7FAF9; --ink:#15302B; --muted:#4E6B65; --line:#D8E3E0;
+  --brand:#147566; --brand-ink:#FFFFFF; --brand-soft:#E2F0EC;
+  --warn:#8A5200; --warn-soft:#FCEFD9; --risk:#A3352A; --risk-soft:#FAE5E2;
+  --seat-empty:#DCE6E3; --seat-full:#147566; --seat-line:#15302B;
+  --shadow: 0 1px 2px rgba(21,48,43,.06), 0 4px 16px rgba(21,48,43,.05);
+  box-sizing:border-box;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme: dark;
+    --bg:#0E1916; --surface:#15221F; --surface-2:#1A2925; --ink:#E4EEEB; --muted:#9BB4AE; --line:#2B3C38;
+    --brand:#46B8A5; --brand-ink:#06201B; --brand-soft:#173430;
+    --warn:#F2B661; --warn-soft:#33270F; --risk:#F2918A; --risk-soft:#3A1E1B;
+    --seat-empty:#2B3C38; --seat-full:#46B8A5; --seat-line:#E4EEEB;
+    --shadow: none;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --bg:#0E1916; --surface:#15221F; --surface-2:#1A2925; --ink:#E4EEEB; --muted:#9BB4AE; --line:#2B3C38;
+  --brand:#46B8A5; --brand-ink:#06201B; --brand-soft:#173430;
+  --warn:#F2B661; --warn-soft:#33270F; --risk:#F2918A; --risk-soft:#3A1E1B;
+  --seat-empty:#2B3C38; --seat-full:#46B8A5; --seat-line:#E4EEEB;
+  --shadow: none;
+}
+html{ scroll-padding-top: env(safe-area-inset-top, 0px); }
+*{ box-sizing:border-box; }
+body{ margin:0; background:var(--bg); color:var(--ink); font-family:"IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif; font-size:15px; line-height:1.5; font-variant-numeric: tabular-nums; }
+button, input, select, textarea{ font:inherit; color:inherit; }
+a{ color:var(--brand); }
+:focus-visible{ outline:3px solid var(--brand); outline-offset:2px; border-radius:6px; }
+
+.app{ display:flex; flex-wrap:wrap; min-height:100vh; }
+.side{ flex:1 1 210px; max-width:100%; background:var(--surface); border-right:1px solid var(--line); padding:20px 14px; display:flex; flex-direction:column; gap:18px; }
+.main{ flex:999 1 620px; min-width:0; padding:24px clamp(16px,3vw,36px) 48px; }
+.brandbox{ padding:0 8px; }
+.logo{ display:block; max-width:160px; max-height:64px; background:#FFFFFF; border-radius:8px; padding:4px 6px; }
+.brandmark[hidden]{ display:none; }
+.brandmark{ display:flex; align-items:baseline; gap:6px; }
+.brandmark b{ font-size:22px; font-weight:700; color:var(--brand); letter-spacing:-.5px; }
+.brandmark span{ font-weight:600; letter-spacing:2px; font-size:13px; }
+.brandsub{ padding:0 8px; margin-top:-14px; font-size:13px; color:var(--muted); }
+.nav{ display:flex; flex-direction:column; gap:2px; }
+.nav button{ text-align:left; border:0; background:transparent; padding:10px 12px; border-radius:8px; font-weight:500; cursor:pointer; min-height:44px; display:flex; align-items:center; gap:10px; }
+.nav button:hover{ background:var(--surface-2); }
+.nav button[aria-current="page"]{ background:var(--brand-soft); color:var(--brand); font-weight:600; }
+.nav svg{ flex-shrink:0; }
+.sidefoot{ margin-top:auto; display:flex; flex-direction:column; gap:6px; font-size:13px; color:var(--muted); padding:0 8px; }
+.linkbtn{ background:none; border:0; padding:6px 0; color:var(--brand); cursor:pointer; text-align:left; font-weight:500; text-decoration:underline; text-underline-offset:3px; min-height:32px; }
+@media (max-width: 760px){
+  .side{ border-right:0; border-bottom:1px solid var(--line); padding:12px; gap:10px; }
+  .brandsub{ display:none; }
+  .nav{ flex-direction:row; flex-wrap:wrap; }
+  .nav button{ flex:1 1 auto; justify-content:center; padding:8px 10px; }
+  .sidefoot{ flex-direction:row; flex-wrap:wrap; gap:14px; margin-top:0; }
+}
+
+h1{ font-size:clamp(24px,2.6vw,30px); line-height:1.2; margin:0; font-weight:700; letter-spacing:-.4px; }
+h2{ font-size:18px; margin:0; font-weight:600; }
+h3{ font-size:15px; margin:0; font-weight:600; }
+.muted{ color:var(--muted); }
+.small{ font-size:13px; }
+.head{ display:flex; flex-wrap:wrap; align-items:flex-end; justify-content:space-between; gap:14px; margin-bottom:20px; }
+.head p{ margin:4px 0 0; }
+.row{ display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
+
+.btn{ display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:44px; padding:0 16px; border-radius:9px; border:1px solid var(--line); background:var(--surface); font-weight:600; cursor:pointer; }
+.btn:hover{ border-color:var(--muted); }
+.btn.primary{ background:var(--brand); color:var(--brand-ink); border-color:var(--brand); }
+.btn.primary:hover{ filter:brightness(1.07); }
+.btn.danger{ color:var(--risk); }
+.btn.small{ min-height:36px; padding:0 12px; font-size:14px; }
+.btn[disabled]{ opacity:.5; cursor:not-allowed; }
+.btn[aria-pressed="true"]{ background:var(--brand-soft); color:var(--brand); border-color:var(--brand); }
+
+.card{ background:var(--surface); border:1px solid var(--line); border-radius:14px; box-shadow:var(--shadow); }
+.pad{ padding:18px 20px; }
+
+.kpis{ display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:12px; margin-bottom:22px; }
+.kpi{ padding:14px 16px; }
+.kpi .v{ font-size:22px; font-weight:700; letter-spacing:-.3px; }
+.kpi .l{ font-size:13px; color:var(--muted); }
+
+.deps{ display:flex; flex-direction:column; gap:10px; }
+.dep{ display:grid; grid-template-columns: 92px minmax(0,1fr) auto; gap:16px; align-items:center; padding:14px 18px; width:100%; text-align:left; cursor:pointer; background:var(--surface); border:1px solid var(--line); border-radius:14px; box-shadow:var(--shadow); }
+.dep:hover{ border-color:var(--brand); }
+.dep .date{ display:flex; flex-direction:column; line-height:1.15; }
+.dep .date .d{ font-size:26px; font-weight:700; }
+.dep .date .m{ font-size:13px; color:var(--muted); text-transform:capitalize; }
+.dep .mid{ display:flex; flex-direction:column; gap:8px; min-width:0; }
+.dep .title{ font-weight:600; font-size:16px; }
+.dep .meta{ font-size:13px; color:var(--muted); }
+.dep .right{ display:flex; flex-direction:column; align-items:flex-end; gap:6px; text-align:right; }
+.dep .res{ font-weight:700; font-size:16px; }
+@media (max-width: 620px){
+  .dep{ grid-template-columns: 70px minmax(0,1fr); }
+  .dep .right{ grid-column: 1 / -1; flex-direction:row; justify-content:space-between; align-items:center; }
+}
+
+.pill{ display:inline-flex; align-items:center; gap:6px; padding:3px 10px; border-radius:999px; font-size:13px; font-weight:600; white-space:nowrap; }
+.pill.ok{ background:var(--brand-soft); color:var(--brand); }
+.pill.warn{ background:var(--warn-soft); color:var(--warn); }
+.pill.risk{ background:var(--risk-soft); color:var(--risk); }
+.pill.neutral{ background:var(--surface-2); color:var(--muted); border:1px solid var(--line); }
+.tag{ font-size:11px; font-weight:700; letter-spacing:.5px; padding:2px 6px; border-radius:4px; background:var(--warn-soft); color:var(--warn); }
+
+.seats{ display:grid; gap:2px; width:100%; }
+.seat{ height:12px; border-radius:2px; background:var(--seat-empty); position:relative; }
+.seat.full{ background:var(--seat-full); }
+.seat.be::after{ content:""; position:absolute; top:-5px; bottom:-5px; right:-2px; width:2px; background:var(--seat-line); border-radius:1px; }
+.seats.big{ grid-template-columns:repeat(auto-fill, minmax(22px,1fr)); gap:5px; }
+.seats.big .seat{ height:28px; border-radius:5px; }
+.seats.big .seat.be::after{ top:-4px; bottom:-4px; right:-4px; width:3px; }
+.legend{ display:flex; flex-wrap:wrap; gap:16px; font-size:13px; color:var(--muted); margin-top:10px; }
+.legend i{ display:inline-block; width:12px; height:12px; border-radius:3px; vertical-align:-1px; margin-right:6px; }
+
+.grid2{ display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:16px; margin-top:16px; }
+.lines{ display:flex; flex-direction:column; }
+.line{ display:flex; justify-content:space-between; gap:12px; padding:7px 0; border-bottom:1px dashed var(--line); }
+.line > span:last-child{ text-align:right; }
+.line:last-child{ border-bottom:0; }
+.line.total{ font-weight:700; border-top:1px solid var(--ink); border-bottom:0; margin-top:4px; padding-top:10px; }
+.pos{ color:var(--brand); }
+.neg{ color:var(--risk); }
+.note{ padding:12px 14px; border-radius:10px; font-size:14px; }
+.note.warn{ background:var(--warn-soft); color:var(--warn); }
+.note.risk{ background:var(--risk-soft); color:var(--risk); }
+.note.ok{ background:var(--brand-soft); color:var(--brand); }
+
+.stops{ display:flex; flex-direction:column; gap:0; }
+.stop{ display:grid; grid-template-columns: 64px 18px minmax(0,1fr) auto; gap:10px; align-items:start; padding:8px 0; }
+.stop .t{ font-weight:700; font-size:16px; }
+.stop .dot{ width:12px; height:12px; border-radius:50%; border:3px solid var(--brand); background:var(--surface); margin-top:5px; position:relative; }
+.stop:not(:last-child) .dot::after{ content:""; position:absolute; left:50%; top:9px; width:2px; height:44px; background:var(--line); transform:translateX(-50%); }
+.stop .n{ font-weight:600; }
+.stop .a{ font-size:13px; color:var(--muted); }
+.stop .c{ font-weight:600; white-space:nowrap; }
+
+.tablewrap{ overflow-x:auto; }
+table{ width:100%; border-collapse:collapse; font-size:14px; }
+th{ text-align:left; font-weight:600; color:var(--muted); font-size:13px; padding:10px 12px; border-bottom:1px solid var(--line); white-space:nowrap; }
+td{ padding:10px 12px; border-bottom:1px solid var(--line); vertical-align:middle; }
+tr:last-child td{ border-bottom:0; }
+tr.group td{ background:var(--surface-2); font-weight:600; font-size:13px; color:var(--muted); padding:8px 12px; }
+td.num, th.num{ text-align:right; white-space:nowrap; }
+.empty{ padding:36px 20px; text-align:center; display:flex; flex-direction:column; align-items:center; gap:12px; }
+.empty p{ margin:0; max-width:460px; }
+
+.filters{ display:flex; flex-wrap:wrap; gap:10px; margin-bottom:14px; }
+.filters input, .filters select{ min-height:42px; padding:0 12px; border:1px solid var(--line); border-radius:9px; background:var(--surface); max-width:100%; }
+.filters input{ flex:1 1 220px; }
+
+dialog{ border:0; padding:0; border-radius:16px; background:var(--surface); color:var(--ink); width:min(680px, calc(100vw - 24px)); max-height:calc(100vh - 32px); box-shadow:0 20px 60px rgba(0,0,0,.25); }
+dialog::backdrop{ background:rgba(10,25,22,.45); }
+.dlg{ display:flex; flex-direction:column; max-height:calc(100vh - 32px); }
+.dlg header{ padding:18px 22px 10px; display:flex; justify-content:space-between; align-items:center; gap:10px; }
+.dlg .body{ padding:6px 22px 18px; overflow:auto; display:flex; flex-direction:column; gap:14px; }
+.dlg footer{ padding:14px 22px; border-top:1px solid var(--line); display:flex; flex-wrap:wrap; gap:10px; justify-content:flex-end; }
+.dlg footer .spacer{ flex:1; }
+.fields{ display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:12px; }
+.field{ display:flex; flex-direction:column; gap:5px; }
+.field label{ font-size:13px; font-weight:600; color:var(--muted); }
+.field input, .field select, .field textarea{ min-height:42px; padding:8px 11px; border:1px solid var(--line); border-radius:9px; background:var(--surface); }
+.field textarea{ min-height:72px; resize:vertical; }
+.field .hint{ font-size:12px; color:var(--muted); }
+fieldset{ border:1px solid var(--line); border-radius:12px; padding:12px 14px 14px; margin:0; }
+legend{ font-weight:600; padding:0 6px; font-size:14px; }
+.pkrow{ display:grid; grid-template-columns: minmax(0,1.1fr) minmax(0,1.6fr) 110px; gap:8px; margin-top:8px; }
+.pkrow input{ min-height:40px; padding:6px 10px; border:1px solid var(--line); border-radius:8px; background:var(--surface); width:100%; }
+.pkhead{ display:grid; grid-template-columns: minmax(0,1.1fr) minmax(0,1.6fr) 110px; gap:8px; font-size:12px; font-weight:600; color:var(--muted); }
+@media (max-width: 560px){ .pkrow, .pkhead{ grid-template-columns: 1fr 1fr; } .pkrow input:nth-child(2){ grid-column:1 / -1; grid-row:2; } .pkhead span:nth-child(2){ display:none; } }
+.iconbtn{ width:44px; height:44px; border:0; background:transparent; border-radius:9px; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; }
+.iconbtn:hover{ background:var(--surface-2); }
+
+.toast{ position:fixed; left:50%; transform:translateX(-50%); bottom:calc(20px + env(safe-area-inset-bottom, 0px)); background:var(--ink); color:var(--bg); padding:10px 16px; border-radius:10px; font-weight:500; z-index:50; max-width:calc(100vw - 32px); }
+.banner{ margin-bottom:16px; }
+.backbtn{ display:inline-flex; align-items:center; gap:6px; background:none; border:0; color:var(--brand); font-weight:600; cursor:pointer; padding:6px 0; min-height:40px; margin-bottom:6px; }
+.simtable td:first-child{ font-weight:600; }
+
+/* Messages clients */
+.flow{ display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px; margin-bottom:22px; }
+.flow .card{ padding:14px 16px; display:flex; flex-direction:column; gap:4px; }
+.flow .when{ font-size:13px; color:var(--brand); font-weight:600; }
+.flow .what{ font-weight:600; }
+.mailtabs{ display:flex; flex-wrap:wrap; gap:8px; margin:12px 0 16px; }
+.mailwrap{ display:grid; grid-template-columns:minmax(0,1fr); gap:16px; }
+.envelope{ background:var(--surface); border:1px solid var(--line); border-radius:14px; overflow:hidden; box-shadow:var(--shadow); }
+.envelope .meta{ padding:14px 18px; border-bottom:1px solid var(--line); font-size:14px; display:grid; grid-template-columns:70px minmax(0,1fr); gap:4px 10px; }
+.envelope .meta b{ color:var(--muted); font-weight:500; }
+.envelope .subject{ font-weight:700; font-size:16px; }
+.mailbody{ background:#EEF2F1; padding:22px 14px; }
+.mail{ max-width:560px; margin:0 auto; background:#FFFFFF; color:#1C2B28; border-radius:12px; overflow:hidden; font-size:15px; line-height:1.55; }
+.mail .top{ background:#0E3B35; color:#FFFFFF; padding:18px 24px; display:flex; align-items:baseline; gap:6px; }
+.mail .top b{ font-size:22px; color:#7FD3C4; }
+.mail .top span{ letter-spacing:2px; font-size:13px; font-weight:600; }
+.mail .in{ padding:22px 24px; }
+.mail h2{ font-size:20px; margin:0 0 10px; color:#0E3B35; }
+.mail p{ margin:0 0 12px; }
+.mail .box{ background:#F1F7F5; border-radius:10px; padding:14px 16px; margin:14px 0; }
+.mail .box .r{ display:flex; justify-content:space-between; gap:12px; padding:5px 0; border-bottom:1px solid #DCE8E4; }
+.mail .box .r:last-child{ border-bottom:0; }
+.mail .box .r span:first-child{ color:#4E6B65; }
+.mail .box .r span:last-child{ text-align:right; font-weight:600; }
+.mail .big{ font-size:22px; font-weight:700; color:#0E3B35; margin:0 0 4px; }
+.mail .cta{ display:inline-block; background:#147566; color:#FFFFFF; text-decoration:none; padding:11px 18px; border-radius:8px; font-weight:600; margin:4px 0 12px; }
+.mail ul{ margin:0 0 12px; padding-left:20px; }
+.mail .alert{ background:#FCEFD9; color:#6B4000; border-radius:10px; padding:12px 14px; margin:12px 0; }
+.mail .foot{ padding:16px 24px; background:#F6F8F7; color:#5A706B; font-size:12px; }
+.phone{ max-width:340px; margin:0 auto; background:#FFFFFF; border-radius:22px; padding:18px 14px; border:1px solid #D8E3E0; }
+.phone .from{ text-align:center; font-size:12px; color:#5A706B; margin-bottom:12px; }
+.bubble{ background:#E9EDEC; color:#1C2B28; border-radius:16px 16px 16px 4px; padding:10px 13px; font-size:14px; line-height:1.45; }
+.smscount{ text-align:center; font-size:12px; color:#5A706B; margin-top:10px; }
+.sched{ display:flex; flex-direction:column; }
+.sched .s{ display:grid; grid-template-columns: 150px minmax(0,1fr) auto; gap:12px; padding:10px 0; border-bottom:1px dashed var(--line); align-items:center; }
+.sched .s:last-child{ border-bottom:0; }
+@media (max-width:560px){ .sched .s{ grid-template-columns:1fr auto; } .sched .s span:first-child{ grid-column:1 / -1; } }
+.chips{ display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px; }
+.chip{ border:1px solid var(--line); background:var(--surface); border-radius:999px; padding:6px 12px; min-height:38px; font-weight:500; cursor:pointer; font-size:14px; }
+.chip[aria-pressed="true"]{ background:var(--brand); color:var(--brand-ink); border-color:var(--brand); }
+.chip .c{ opacity:.75; margin-left:6px; }
+tr.click{ cursor:pointer; } tr.click:hover td{ background:var(--surface-2); }
+.namebtn{ background:none; border:0; padding:0; font-weight:600; cursor:pointer; text-align:left; }
+.camp .stats{ display:grid; grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); gap:10px; margin:12px 0; }
+.camp .stats div{ background:var(--surface-2); border-radius:10px; padding:10px 12px; }
+.camp .stats b{ display:block; font-size:18px; }
+.camp .stats span{ font-size:13px; color:var(--muted); }
+.camp{ margin-bottom:14px; }
+.check{ display:flex; gap:10px; align-items:flex-start; font-size:14px; }
+.check input{ width:20px; height:20px; margin-top:1px; accent-color:var(--brand); flex-shrink:0; }
+.mail .rate{ display:flex; gap:8px; margin:6px 0 10px; }
+.mail .rate a{ width:40px; height:40px; border-radius:8px; background:#F1F7F5; color:#0E3B35; display:inline-flex; align-items:center; justify-content:center; font-weight:700; text-decoration:none; }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="side">
+    <div class="brandbox"><img id="logo" class="logo" src="https://www.lgdparis.com/images/lgd-paris-logo.jpeg" alt="LGD Paris"><div class="brandmark" id="wordmark" hidden><b>LGD</b><span>PARIS</span></div></div>
+    <div class="brandsub">Pilotage des excursions</div>
+    <nav class="nav" aria-label="Sections">
+      <button type="button" data-nav="departs"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>Départs</button>
+      <button type="button" data-nav="reservations"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>Réservations</button>
+      <button type="button" data-nav="clients"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>Clients</button>
+      <button type="button" data-nav="campagnes"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>Campagnes</button>
+      <button type="button" data-nav="excursions"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>Excursions</button>
+      <button type="button" data-nav="messages"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>Messages clients</button>
+      <button type="button" data-nav="pubs"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>Publicités</button>
+    </nav>
+    <div class="sidefoot" id="sidefoot"></div>
+  </aside>
+  <main class="main" id="main" tabindex="-1"></main>
+</div>
+<dialog id="dlg"></dialog>
+<div id="toast" class="toast" hidden></div>
+
+<script>
+(function(){
+  'use strict';
+
+  var TVA = 10; // TVA appliquée partout, choix LGD Paris
+  var CONTACT_TEL = '01 42 37 95 40';
+  var CONTACT_MAIL = 'contact@lgdparis.com';
+  var MAX_PK = 4;
+
+  var S = {
+    view: 'departs', depId: null,
+    excursions: [], departures: [], bookings: [],
+    clients: [], campaigns: [],
+    loaded: { excursions:false, departures:false, bookings:false, clients:false, campaigns:false },
+    status: 'loading',
+    canWrite: true, showPast: false,
+    filter: { q:'', dep:'', status:'', source:'' },
+    msg: { bookingId:'', type:'confirmation' },
+    seg: 'voyage', cq: ''
+  };
+  var db = null, downloads = null;
+
+  var SOURCES = ['Instagram','Facebook','TikTok','Google','Site direct','Téléphone','Autre'];
+  var BSTATUS = { payee:'Payée', attente:'En attente', annulee:'Annulée', remboursee:'Remboursée' };
+  var DSTATUS = { vente:'En vente', confirme:'Confirmé', annule:'Annulé', termine:'Terminé' };
+  var MTYPES = [
+    ['confirmation','Confirmation'], ['rappel','Rappel la veille'], ['sms','SMS de rappel'], ['annulation','Départ annulé'], ['avis','Demande d’avis']
+  ];
+
+  // ---------- Utilitaires ----------
+  function esc(v){ return String(v == null ? '' : v).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+  function num(v, d){ var n = parseFloat(String(v == null ? '' : v).replace(',', '.')); return isFinite(n) ? n : (d || 0); }
+  var eur0 = new Intl.NumberFormat('fr-FR', { style:'currency', currency:'EUR', maximumFractionDigits:0 });
+  var eur2 = new Intl.NumberFormat('fr-FR', { style:'currency', currency:'EUR', minimumFractionDigits:2, maximumFractionDigits:2 });
+  function money(n){ return eur0.format(Math.round(n)); }
+  function money2(n){ return eur2.format(n); }
+  function signed(n){ return (n > 0 ? '+' : '') + money(n); }
+  function isoOf(d){ return new Date(d.getTime() - d.getTimezoneOffset()*60000).toISOString().slice(0,10); }
+  function todayISO(){ return isoOf(new Date()); }
+  function parseDate(iso){ if(!iso) return null; var p = iso.split('-'); return new Date(+p[0], +p[1]-1, +p[2]); }
+  function addDays(iso, n){ var d = parseDate(iso); if(!d) return null; d.setDate(d.getDate()+n); return isoOf(d); }
+  function daysUntil(iso){ var d = parseDate(iso); if(!d) return null; return Math.round((d - parseDate(todayISO())) / 86400000); }
+  function fmtDate(iso, opts){ var d = parseDate(iso); return d ? d.toLocaleDateString('fr-FR', opts || { weekday:'long', day:'numeric', month:'long', year:'numeric' }) : '—'; }
+  function hhmm(t){ if(!t) return '—'; var p = t.split(':'); return p[0] + 'h' + (p[1] || '00'); }
+  function plural(n, s, p){ return n + ' ' + (n > 1 ? (p || s + 's') : s); }
+  function uid(){ return 'p' + Math.random().toString(36).slice(2, 8); }
+  function ref(b){ return 'LGD-' + String(b.id || 'EXEMPLE').slice(0,6).toUpperCase(); }
+  function firstName(n){ return String(n || '').trim().split(/\s+/)[0] || 'Bonjour'; }
+  function mapsUrl(a){ return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(a || ''); }
+  // « dans la nuit du vendredi 11 au samedi 12 décembre, à 01h00 » ou « le samedi 12 décembre à 08h00 »
+  function whenLabel(dateIso, time){
+    var h = time ? parseInt(time.split(':')[0], 10) : 12;
+    if(h < 5){
+      var prev = parseDate(addDays(dateIso, -1)), d = parseDate(dateIso);
+      if(!d) return hhmm(time);
+      var p = prev.toLocaleDateString('fr-FR', { weekday:'long', day:'numeric' });
+      var c = d.toLocaleDateString('fr-FR', { weekday:'long', day:'numeric', month:'long' });
+      return 'dans la nuit du ' + p + ' au ' + c + ', à ' + hhmm(time);
+    }
+    return 'le ' + fmtDate(dateIso, { weekday:'long', day:'numeric', month:'long' }) + ' à ' + hhmm(time);
+  }
+
+  function exc(id){ for(var i=0;i<S.excursions.length;i++) if(S.excursions[i].id === id) return S.excursions[i]; return null; }
+  function dep(id){ for(var i=0;i<S.departures.length;i++) if(S.departures[i].id === id) return S.departures[i]; return null; }
+  function bk(id){ for(var i=0;i<S.bookings.length;i++) if(S.bookings[i].id === id) return S.bookings[i]; return null; }
+  function bookingsOf(depId){ return S.bookings.filter(function(b){ return b.departureId === depId; }); }
+
+  // Points de prise en charge : ceux du départ, sinon ceux de l'excursion
+  function excPickups(e){
+    if(!e) return [];
+    if(e.pickups && e.pickups.length) return e.pickups;
+    return [{ id:'p0', name: e.place || 'Point de départ', address:'', time: e.depTime || '' }];
+  }
+  function pickupsOf(d){
+    if(d && d.pickups && d.pickups.length) return d.pickups;
+    return excPickups(d ? exc(d.excursionId) : null);
+  }
+  function pickupOf(b){
+    var d = dep(b.departureId), list = pickupsOf(d);
+    for(var i=0;i<list.length;i++) if(list[i].id === b.pickupId) return list[i];
+    return list[0] || { id:'', name:'Point à préciser', address:'', time:'' };
+  }
+
+  // ---------- Calculs ----------
+  function costsOf(e, d){
+    e = e || {};
+    var km = num(e.km) + num(d && d.extraKm);
+    var fuel = km * num(e.conso) / 100 * num(e.fuelPrice);
+    var drivers = num(e.driverCost) * Math.max(1, num(e.drivers, 1));
+    return { km: km, fuel: fuel, tolls: num(e.tolls), drivers: drivers, parking: num(e.parking), hotel: num(e.hotel), other: num(e.other),
+      total: fuel + num(e.tolls) + drivers + num(e.parking) + num(e.hotel) + num(e.other) };
+  }
+  function adsOf(d){
+    var a = d.ads || {};
+    var spent = num(a.meta) + num(a.tiktok) + num(a.google) + num(a.other);
+    return { spent: spent, planned: num(d.adsPlanned), used: spent > 0 ? spent : num(d.adsPlanned), isPlanned: !(spent > 0) };
+  }
+  function stats(d){
+    var e = exc(d.excursionId) || {};
+    var price = num(e.price), priceHT = price / (1 + TVA/100);
+    var bs = bookingsOf(d.id);
+    var paid = bs.filter(function(b){ return b.status === 'payee'; });
+    var pending = bs.filter(function(b){ return b.status === 'attente'; });
+    var pax = paid.reduce(function(s,b){ return s + num(b.qty); }, 0);
+    var paxPending = pending.reduce(function(s,b){ return s + num(b.qty); }, 0);
+    var caTTC = paid.reduce(function(s,b){ return s + num(b.amount); }, 0);
+    var caHT = caTTC / (1 + TVA/100);
+    var fc = costsOf(e, d), ads = adsOf(d);
+    var costs = fc.total + ads.used, result = caHT - costs;
+    var cap = num(d.capacity) || num(e.capacity) || 55;
+    var be = priceHT > 0 ? Math.ceil(costs / priceHT) : 0;
+    var minPax = num(d.minPax) || be;
+    var dd = daysUntil(d.decisionDate), days = daysUntil(d.date);
+    var st;
+    if(d.status === 'annule') st = { key:'neutral', label:'Annulé' };
+    else if(d.status === 'termine' || (days != null && days < 0)) st = { key:'neutral', label:'Terminé' };
+    else if(pax >= cap) st = { key:'ok', label:'Complet' };
+    else if(result >= 0) st = { key:'ok', label:'Rentable' };
+    else if(dd != null && dd <= 3 && pax < minPax) st = { key:'risk', label: dd < 0 ? 'Décision dépassée' : 'À décider' };
+    else st = { key:'warn', label:'Sous le seuil' };
+    return { e:e, price:price, priceHT:priceHT, pax:pax, paxPending:paxPending, caTTC:caTTC, caHT:caHT, fc:fc, ads:ads, costs:costs, result:result, cap:cap, be:be, minPax:minPax, missing:Math.max(0, be - pax), dd:dd, days:days, st:st, count:paid.length, paid:paid };
+  }
+
+  function seatsHTML(pax, cap, be, big){
+    cap = Math.max(1, Math.min(120, Math.round(cap)));
+    var h = '<div class="seats' + (big ? ' big' : '') + '" role="img" aria-label="' + esc(pax + ' places vendues sur ' + cap + ', seuil de rentabilité à ' + be + ' passagers') + '"' + (big ? '' : ' style="grid-template-columns:repeat(' + cap + ',minmax(0,1fr))"') + '>';
+    for(var i=1;i<=cap;i++) h += '<span class="seat' + (i <= pax ? ' full' : '') + (i === be && be > 0 && be <= cap ? ' be' : '') + '"></span>';
+    return h + '</div>';
+  }
+  function pill(st){ return '<span class="pill ' + st.key + '">' + esc(st.label) + '</span>'; }
+  function bpill(st){ var k = st === 'payee' ? 'ok' : st === 'attente' ? 'warn' : st === 'annulee' ? 'risk' : 'neutral'; return '<span class="pill ' + k + '">' + esc(BSTATUS[st] || st || '—') + '</span>'; }
+
+  // ---------- Base de données ----------
+  function col(name){ return db.collection(name); }
+  function toast(msg){ var t = document.getElementById('toast'); t.textContent = msg; t.hidden = false; clearTimeout(toast._t); toast._t = setTimeout(function(){ t.hidden = true; }, 2800); }
+  function writeErr(e){
+    var code = e && e.code;
+    if(code === 'invalid_argument'){ S.canWrite = false; render(); toast('Vous n’avez pas le droit de modifier ces données.'); }
+    else if(code === 'quota_exceeded') toast('Base pleine : supprimez d’anciennes données pour continuer.');
+    else toast('L’enregistrement a échoué. Réessayez dans un instant.');
+  }
+  function saveDoc(name, id, data){ if(!db) return Promise.reject({ code:'unavailable' }); var r = id ? col(name).doc(id) : col(name).doc(); return r.set(data).then(function(){ return r.id; }); }
+  function delDoc(name, id){ return col(name).doc(id).delete(); }
+  function subscribe(name){
+    col(name).onSnapshot(function(snap){
+      try{
+        S[name] = snap.docs.map(function(d){ return Object.assign({}, d.data() || {}, { id: d.id }); });
+        S.loaded[name] = true;
+        if(Object.keys(S.loaded).every(function(k){ return S.loaded[k]; }) && S.status === 'loading'){ S.status = 'ready'; clearTimeout(boot._timer); }
+        if(S.status === 'ready') render();
+      }catch(err){ console.error(err); S.status = 'error'; render(); }
+    }, function(err){ clearTimeout(boot._timer); S.status = (err && err.code === 'revoked') ? 'nodb' : (err && err.code === 'permission-denied') ? 'denied' : 'error'; render(); });
+  }
+  // Logo : si l'image ne charge pas (aperçu claude.ai), on affiche le nom en texte
+  (function(){
+    var lg = document.getElementById('logo'), wm = document.getElementById('wordmark');
+    function fallback(){ lg.style.display = 'none'; wm.hidden = false; }
+    lg.addEventListener('error', fallback);
+    if(lg.complete && !lg.naturalWidth) fallback();
+  })();
+
+  var IS_ARTIFACT = !!(window.claude && window.claude.use);
+  var IS_PROD = !IS_ARTIFACT && !!window.LGD_CONFIG;
+  var FB = 'https://www.gstatic.com/firebasejs/10.12.2/';
+  function loadScript(src){ return new Promise(function(res, rej){ var el = document.createElement('script'); el.src = src; el.onload = res; el.onerror = function(){ rej(new Error(src)); }; document.head.appendChild(el); }); }
+  function browserSave(o){
+    try{
+      var blob = new Blob([o.data], { type:'text/csv;charset=utf-8' }), a = document.createElement('a');
+      a.href = URL.createObjectURL(blob); a.download = o.filename; document.body.appendChild(a); a.click();
+      setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+      return Promise.resolve({ status:'saved' });
+    }catch(e){ return Promise.reject({ code:'unavailable' }); }
+  }
+  function boot(){
+    if(IS_ARTIFACT) return bootArtifact();
+    if(IS_PROD) return bootFirebase();
+    S.status = 'noconfig'; render();
+  }
+  function bootFirebase(){
+    S.status = 'loading'; render();
+    loadScript(FB + 'firebase-app-compat.js').then(function(){
+      return Promise.all([loadScript(FB + 'firebase-auth-compat.js'), loadScript(FB + 'firebase-firestore-compat.js')]);
+    }).then(function(){
+      firebase.initializeApp(window.LGD_CONFIG.firebase);
+      downloads = { save: browserSave };
+      firebase.auth().onAuthStateChanged(function(u){
+        if(!u){ S.status = 'login'; S.user = null; render(); return; }
+        S.user = u.email || '';
+        db = firebase.firestore();
+        S.status = 'loading'; render();
+        boot._timer = setTimeout(function(){ if(S.status === 'loading'){ S.status = 'error'; render(); } }, 15000);
+        ['excursions','departures','bookings','clients','campaigns'].forEach(subscribe);
+      });
+    }).catch(function(){ S.status = 'error'; render(); });
+  }
+  function bootArtifact(){
+    render();
+    boot._timer = setTimeout(function(){ if(S.status === 'loading'){ S.status = 'error'; render(); } }, 10000);
+    if(!window.claude || !window.claude.use){ S.status = 'nodb'; clearTimeout(boot._timer); render(); return; }
+    window.claude.use('db').then(function(d){
+      if(!d){ S.status = 'nodb'; clearTimeout(boot._timer); render(); return; }
+      db = d; ['excursions','departures','bookings','clients','campaigns'].forEach(subscribe);
+    }).catch(function(){ S.status = 'nodb'; clearTimeout(boot._timer); render(); });
+    window.claude.use('downloads').then(function(d){ downloads = d; if(S.status === 'ready') render(); }).catch(function(){});
+    window.claude.use('user').then(function(u){ if(u && u.can) Promise.resolve(u.can('data.write')).then(function(v){ if(v === false){ S.canWrite = false; render(); } }); }).catch(function(){});
+  }
+
+  // ---------- Rendu ----------
+  var main = document.getElementById('main');
+  function dis(){ return S.canWrite ? '' : ' disabled'; }
+  function render(){
+    try{ renderInner(); }catch(err){ console.error(err); main.innerHTML = '<div class="card empty"><h2>Un affichage a échoué</h2><p class="muted">Rechargez la page. Si le problème revient, signalez ce que vous faisiez juste avant.</p></div>'; }
+  }
+  function renderInner(){
+    var navView = S.view === 'depart' ? 'departs' : S.view;
+    document.querySelectorAll('[data-nav]').forEach(function(b){ if(b.getAttribute('data-nav') === navView && b.closest('.nav')) b.setAttribute('aria-current','page'); else b.removeAttribute('aria-current'); });
+    var hasDemo = S.departures.some(function(d){ return d.demo; });
+    var foot = '';
+    if(IS_PROD && S.user) foot = '<span>' + esc(S.user) + '</span><button type="button" class="linkbtn" data-act="logout">Se déconnecter</button>';
+    else if(!IS_PROD && S.status === 'ready' && S.canWrite) foot = hasDemo ? '<button type="button" class="linkbtn" data-act="demo-clear">Effacer les données de démo</button>' : '<button type="button" class="linkbtn" data-act="demo-load">Charger une démo</button>';
+    document.getElementById('sidefoot').innerHTML = foot;
+    if(S.status === 'login'){ main.innerHTML = viewLogin(); var le = document.getElementById('f_email'); if(le) le.focus(); return; }
+    if(S.status === 'denied'){ main.innerHTML = '<div class="card empty"><h2>Accès non autorisé</h2><p class="muted">Le compte ' + esc(S.user || '') + ' n’est pas dans la liste des associés. Demandez à votre développeur de l’ajouter.</p><button type="button" class="btn" data-act="logout">Se déconnecter</button></div>'; return; }
+    if(S.status === 'noconfig'){ main.innerHTML = '<div class="card empty"><h2>Configuration manquante</h2><p class="muted">Le fichier config.js est introuvable. Voir le guide d’installation (README-DEVELOPPEUR.md).</p></div>'; return; }
+    if(S.status === 'loading'){ main.innerHTML = '<div class="card empty"><p class="muted">Chargement des données…</p></div>'; return; }
+    if(S.status === 'nodb'){ main.innerHTML = '<div class="card empty"><h2>Données inaccessibles</h2><p class="muted">Ouvrez l’outil depuis claude.ai en étant connecté avec un compte qui a accès à cet artifact.</p></div>'; return; }
+    if(S.status === 'error'){ main.innerHTML = '<div class="card empty"><h2>Les données n’ont pas pu être chargées</h2><p class="muted">Rechargez la page. Si le problème continue, vérifiez votre connexion.</p></div>'; return; }
+    var banner = S.canWrite ? '' : '<div class="note warn banner">Lecture seule : votre accès ne permet pas de modifier les données.</div>';
+    var h;
+    if(S.view === 'depart' && dep(S.depId)) h = viewDeparture(dep(S.depId));
+    else if(S.view === 'reservations') h = viewBookings();
+    else if(S.view === 'excursions') h = viewExcursions();
+    else if(S.view === 'messages') h = viewMessages();
+    else if(S.view === 'pubs') h = viewAds();
+    else if(S.view === 'clients') h = viewClients();
+    else if(S.view === 'campagnes') h = viewCampaigns();
+    else { if(S.view !== 'depart') S.view = 'departs'; h = viewDepartures(); }
+    main.innerHTML = banner + h;
+  }
+  function viewLogin(){
+    return '<div class="card pad" style="max-width:420px;margin:8vh auto 0"><h1 style="margin-bottom:6px">Connexion</h1><p class="muted" style="margin:0 0 16px">Espace réservé aux associés de LGD Paris.</p>' +
+      '<form id="login-form" novalidate style="display:flex;flex-direction:column;gap:12px">' + fld('E-mail', 'email', '', 'email', ' autocomplete="username" required') + fld('Mot de passe', 'password', '', 'password', ' autocomplete="current-password" required') +
+      '<p id="login-err" class="note risk" hidden></p><button type="submit" class="btn primary">Se connecter</button><button type="button" class="linkbtn" data-act="reset-pwd" style="align-self:center">Mot de passe oublié</button></form></div>';
+  }
+  function kpi(v, l){ return '<div class="card kpi"><div class="v">' + v + '</div><div class="l">' + esc(l) + '</div></div>'; }
+  function line(l, v){ return '<div class="line"><span>' + esc(l) + '</span><span>' + v + '</span></div>'; }
+
+  // --- Départs ---
+  function viewDepartures(){
+    var all = S.departures.slice().sort(function(a,b){ return (a.date||'').localeCompare(b.date||''); });
+    var upcoming = all.filter(function(d){ var n = daysUntil(d.date); return n == null || n >= 0; });
+    var past = all.filter(function(d){ var n = daysUntil(d.date); return n != null && n < 0; }).reverse();
+    var live = upcoming.filter(function(d){ return d.status !== 'annule'; });
+    var tot = live.reduce(function(a, d){ var s = stats(d); a.pax += s.pax; a.ca += s.caTTC; a.res += s.result; a.risk += (s.st.key === 'risk' ? 1 : 0); return a; }, { pax:0, ca:0, res:0, risk:0 });
+    var h = '<div class="head"><div><h1>Départs</h1><p class="muted">Remplissage et rentabilité de chaque départ.</p></div><div class="row"><button type="button" class="btn primary" data-act="dep-new"' + dis() + '>Nouveau départ</button></div></div>';
+    if(!S.excursions.length) return h + '<div class="card empty"><h2>Créez d’abord vos excursions</h2><p class="muted">Une excursion contient le prix, les points de prise en charge et les coûts. Chaque départ s’appuie dessus pour calculer sa rentabilité.</p><button type="button" class="btn primary" data-act="seed"' + dis() + '>Créer Amsterdam, Bruges et Strasbourg</button></div>';
+    h += '<div class="kpis">' + kpi(live.length, 'départs à venir') + kpi(tot.pax, 'passagers vendus') + kpi(money(tot.ca), 'encaissé TTC') + kpi('<span class="' + (tot.res >= 0 ? 'pos' : 'neg') + '">' + signed(tot.res) + '</span>', 'résultat HT si les départs partaient aujourd’hui') + '</div>';
+    if(tot.risk) h += '<div class="note risk banner">' + plural(tot.risk, 'départ') + ' sous le seuil avec une date de décision proche. Relancez la pub ou décidez de maintenir ou d’annuler.</div>';
+    h += upcoming.length ? '<div class="deps">' + upcoming.map(depRow).join('') + '</div>' : '<div class="card empty"><h2>Aucun départ à venir</h2><p class="muted">Programmez une date pour une de vos excursions pour commencer à suivre les ventes.</p><button type="button" class="btn primary" data-act="dep-new"' + dis() + '>Nouveau départ</button></div>';
+    if(past.length){
+      h += '<div style="margin-top:22px"><button type="button" class="linkbtn" data-act="toggle-past">' + (S.showPast ? 'Masquer' : 'Afficher') + ' les départs passés (' + past.length + ')</button></div>';
+      if(S.showPast) h += '<div class="deps" style="margin-top:10px">' + past.map(depRow).join('') + '</div>';
+    }
+    return h + '<div class="legend"><span><i style="background:var(--seat-full)"></i>place vendue</span><span><i style="background:var(--seat-empty)"></i>place libre</span><span><i style="background:var(--seat-line);width:3px"></i>seuil de rentabilité</span></div>';
+  }
+  function depRow(d){
+    var s = stats(d), dt = parseDate(d.date), pks = pickupsOf(d);
+    var pkTxt = pks.length > 1 ? plural(pks.length, 'point') + ' de prise en charge' : (pks[0] ? hhmm(pks[0].time) + ' · ' + pks[0].name : '');
+    return '<button type="button" class="dep" data-act="dep-open" data-id="' + esc(d.id) + '">' +
+      '<span class="date"><span class="d">' + (dt ? dt.getDate() : '—') + '</span><span class="m">' + esc(dt ? dt.toLocaleDateString('fr-FR', { weekday:'short', month:'short' }) : 'sans date') + '</span></span>' +
+      '<span class="mid"><span class="title">' + esc(s.e.name || 'Excursion supprimée') + (d.demo ? ' <span class="tag">DÉMO</span>' : '') + '</span>' + seatsHTML(s.pax, s.cap, s.be, false) +
+      '<span class="meta">' + s.pax + ' / ' + s.cap + ' passagers' + (s.paxPending ? ' (+' + s.paxPending + ' en attente)' : '') + ' · seuil ' + s.be + (s.missing ? ' · il en manque ' + s.missing : '') + ' · ' + esc(pkTxt) + '</span></span>' +
+      '<span class="right">' + pill(s.st) + '<span class="res ' + (s.result >= 0 ? 'pos' : 'neg') + '">' + signed(s.result) + '</span></span></button>';
+  }
+
+  // --- Fiche d'un départ ---
+  function viewDeparture(d){
+    var s = stats(d), pks = pickupsOf(d);
+    var bs = bookingsOf(d.id);
+    var h = '<button type="button" class="backbtn" data-nav="departs"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>Tous les départs</button>';
+    h += '<div class="head"><div><h1>' + esc(s.e.name || 'Excursion supprimée') + (d.demo ? ' <span class="tag">DÉMO</span>' : '') + '</h1><p class="muted">' + esc(fmtDate(d.date)) + (s.e.returnTime ? ' · retour prévu vers ' + esc(hhmm(s.e.returnTime)) : '') + '</p></div>' +
+      '<div class="row">' + pill(s.st) + '<button type="button" class="btn" data-act="dep-edit" data-id="' + esc(d.id) + '"' + dis() + '>Modifier le départ</button></div></div>';
+
+    var msg;
+    if(s.st.label === 'Annulé') msg = '<div class="note warn">Départ annulé. Remboursez les voyageurs encore marqués « Payée » : chacun recevra l’e-mail « Départ annulé ».</div>';
+    else if(s.pax >= s.cap) msg = '<div class="note ok">Complet. Fermez la vente et coupez la pub pour ce départ.</div>';
+    else if(s.result >= 0) msg = '<div class="note ok">Départ rentable : chaque place vendue en plus rapporte ' + money2(s.priceHT) + ' HT.</div>';
+    else msg = '<div class="note ' + (s.st.key === 'risk' ? 'risk' : 'warn') + '">Il manque ' + plural(s.missing, 'passager') + ' pour couvrir les coûts' + (d.decisionDate ? ' · date de décision : ' + esc(fmtDate(d.decisionDate, { day:'numeric', month:'long' })) + (s.dd != null ? (s.dd >= 0 ? ' (dans ' + plural(s.dd, 'jour') + ')' : ' (dépassée)') : '') : '') + '.</div>';
+    h += '<div class="card pad"><div class="row" style="justify-content:space-between;margin-bottom:12px"><h2>' + s.pax + ' passagers sur ' + s.cap + '</h2><span class="muted small">Seuil de rentabilité : ' + plural(s.be, 'passager') + '</span></div>' + seatsHTML(s.pax, s.cap, s.be, true) +
+      '<div class="legend"><span><i style="background:var(--seat-full)"></i>place vendue</span><span><i style="background:var(--seat-empty)"></i>place libre</span><span><i style="background:var(--seat-line);width:3px"></i>seuil de rentabilité</span></div><div style="margin-top:14px">' + msg + '</div></div>';
+
+    // Itinéraire de prise en charge
+    h += '<div class="card pad" style="margin-top:16px"><h2 style="margin-bottom:6px">Prise en charge</h2><p class="muted small" style="margin:0 0 6px">Dans l’ordre de passage du car.</p><div class="stops">' +
+      pks.map(function(p){
+        var n = s.paid.filter(function(b){ return pickupOf(b).id === p.id; }).reduce(function(t,b){ return t + num(b.qty); }, 0);
+        return '<div class="stop"><span class="t">' + esc(hhmm(p.time)) + '</span><span class="dot" aria-hidden="true"></span><span><span class="n">' + esc(p.name) + '</span><br><span class="a">' + (p.address ? '<a href="' + esc(mapsUrl(p.address)) + '" target="_blank" rel="noopener">' + esc(p.address) + '</a>' : 'Adresse à compléter') + '</span></span><span class="c">' + plural(n, 'passager') + '</span></div>';
+      }).join('') + '</div></div>';
+
+    // Finances + organisation
+    h += '<div class="grid2"><div class="card pad"><h2 style="margin-bottom:8px">Finances</h2><div class="lines">' +
+      line('Encaissé TTC (' + plural(s.count, 'réservation') + ')', money2(s.caTTC)) + line('Encaissé HT (TVA ' + TVA + ' %)', money2(s.caHT)) +
+      line('Carburant (' + Math.round(s.fc.km) + ' km)', '− ' + money2(s.fc.fuel)) + line('Péages', '− ' + money2(s.fc.tolls)) +
+      line('Conducteur' + (num(s.e.drivers,1) > 1 ? 's (' + num(s.e.drivers,1) + ')' : ''), '− ' + money2(s.fc.drivers)) + line('Parking', '− ' + money2(s.fc.parking)) + line('Hôtel conducteur', '− ' + money2(s.fc.hotel)) +
+      (s.fc.other ? line('Autres frais', '− ' + money2(s.fc.other)) : '') + line('Publicité' + (s.ads.isPlanned ? ' (budget prévu)' : ' (dépensé)'), '− ' + money2(s.ads.used)) +
+      '<div class="line total"><span>Résultat HT</span><span class="' + (s.result >= 0 ? 'pos' : 'neg') + '">' + money2(s.result) + '</span></div></div><p class="muted small" style="margin:10px 0 0">Avant frais fixes de l’entreprise, entretien et usure du véhicule.</p></div>';
+    var ads = d.ads || {};
+    h += '<div class="card pad"><h2 style="margin-bottom:8px">Organisation</h2><div class="lines">' +
+      line('Véhicule', esc(d.vehicle || 'À affecter')) + line('Conducteur(s)', esc(d.driversNames || 'À affecter')) +
+      (num(d.extraKm) ? line('Km ajoutés pour les prises en charge', Math.round(num(d.extraKm)) + ' km') : '') +
+      line('Minimum pour maintenir', plural(s.minPax, 'passager')) + line('Date de décision', d.decisionDate ? esc(fmtDate(d.decisionDate, { day:'numeric', month:'long', year:'numeric' })) : 'Non fixée') +
+      line('Pub Meta (Instagram, Facebook)', money(num(ads.meta))) + line('Pub TikTok', money(num(ads.tiktok))) + line('Pub Google', money(num(ads.google))) + line('Autre pub', money(num(ads.other))) +
+      '</div>' + (d.notes ? '<p class="small" style="margin:10px 0 0;white-space:pre-line">' + esc(d.notes) + '</p>' : '') + '</div></div>';
+
+    // Passagers, regroupés par point de prise en charge
+    h += '<div class="card" style="margin-top:16px"><div class="pad row" style="justify-content:space-between"><h2>Liste des passagers</h2><div class="row">' +
+      (downloads ? '<button type="button" class="btn small" data-act="manifest" data-id="' + esc(d.id) + '"' + (bs.length ? '' : ' disabled') + '>Exporter la liste (CSV)</button>' : '') +
+      '<button type="button" class="btn small primary" data-act="bk-new" data-dep="' + esc(d.id) + '"' + dis() + '>Ajouter une réservation</button></div></div>';
+    if(!bs.length){
+      h += '<div class="empty" style="padding-top:8px"><p class="muted">Aucune réservation pour l’instant. Les réservations en ligne arriveront ici automatiquement une fois le paiement branché ; en attendant, ajoutez-les à la main.</p></div>';
+    } else {
+      h += '<div class="tablewrap"><table><thead><tr><th>Nom</th><th>Téléphone</th><th class="num">Places</th><th class="num">Montant</th><th>Statut</th><th>Source</th><th><span class="muted">Actions</span></th></tr></thead><tbody>';
+      pks.forEach(function(p){
+        var group = bs.filter(function(b){ return pickupOf(b).id === p.id; }).sort(function(a,c){ return (a.name||'').localeCompare(c.name||''); });
+        if(!group.length) return;
+        var n = group.filter(function(b){ return b.status === 'payee'; }).reduce(function(t,b){ return t + num(b.qty); }, 0);
+        h += '<tr class="group"><td colspan="7">' + esc(hhmm(p.time) + ' · ' + p.name) + ' · ' + plural(n, 'passager') + '</td></tr>';
+        h += group.map(function(b){ return '<tr><td><strong>' + esc(b.name) + '</strong>' + (b.email ? '<div class="muted small">' + esc(b.email) + '</div>' : '') + '</td><td>' + (b.phone ? '<a href="tel:' + esc(String(b.phone).replace(/\s+/g,'')) + '">' + esc(b.phone) + '</a>' : '—') + '</td><td class="num">' + num(b.qty) + '</td><td class="num">' + money2(num(b.amount)) + '</td><td>' + bpill(b.status) + '</td><td>' + esc(b.source || '—') + '</td><td><div class="row" style="flex-wrap:nowrap;gap:6px"><button type="button" class="btn small" data-act="bk-msg" data-id="' + esc(b.id) + '">Messages</button><button type="button" class="btn small" data-act="bk-edit" data-id="' + esc(b.id) + '"' + dis() + '>Modifier</button></div></td></tr>'; }).join('');
+      });
+      h += '</tbody></table></div>';
+    }
+    return h + '</div>';
+  }
+
+  // --- Réservations ---
+  function viewBookings(){
+    var f = S.filter, q = f.q.trim().toLowerCase();
+    var list = S.bookings.filter(function(b){
+      if(f.dep && b.departureId !== f.dep) return false;
+      if(f.status && b.status !== f.status) return false;
+      if(f.source && b.source !== f.source) return false;
+      if(q && ((b.name||'') + ' ' + (b.email||'') + ' ' + (b.phone||'')).toLowerCase().indexOf(q) < 0) return false;
+      return true;
+    }).sort(function(a,b){ return (b.createdAt||'').localeCompare(a.createdAt||''); });
+    var deps = S.departures.slice().sort(function(a,b){ return (a.date||'').localeCompare(b.date||''); });
+    var h = '<div class="head"><div><h1>Réservations</h1><p class="muted">' + plural(S.bookings.length, 'réservation') + ' au total.</p></div><div class="row"><button type="button" class="btn primary" data-act="bk-new"' + (S.departures.length ? dis() : ' disabled') + '>Ajouter une réservation</button></div></div>';
+    h += '<div class="filters" role="search"><input type="search" id="f-q" placeholder="Rechercher un nom, un e-mail, un téléphone" aria-label="Rechercher" value="' + esc(f.q) + '">' +
+      '<select id="f-dep" aria-label="Départ"><option value="">Tous les départs</option>' + deps.map(function(d){ var e = exc(d.excursionId) || {}; return '<option value="' + esc(d.id) + '"' + (f.dep === d.id ? ' selected' : '') + '>' + esc((e.name || '?') + ' · ' + fmtDate(d.date, { day:'numeric', month:'short' })) + '</option>'; }).join('') + '</select>' +
+      '<select id="f-status" aria-label="Statut"><option value="">Tous les statuts</option>' + Object.keys(BSTATUS).map(function(k){ return '<option value="' + k + '"' + (f.status === k ? ' selected' : '') + '>' + BSTATUS[k] + '</option>'; }).join('') + '</select>' +
+      '<select id="f-source" aria-label="Source"><option value="">Toutes les sources</option>' + SOURCES.map(function(x){ return '<option' + (f.source === x ? ' selected' : '') + '>' + esc(x) + '</option>'; }).join('') + '</select></div>';
+    if(!list.length) return h + '<div class="card empty"><p class="muted">' + (S.bookings.length ? 'Aucune réservation ne correspond à ces filtres.' : 'Pas encore de réservation. Ajoutez-en une depuis un départ ou avec le bouton ci-dessus.') + '</p></div>';
+    return h + '<div class="card tablewrap"><table><thead><tr><th>Nom</th><th>Départ</th><th>Prise en charge</th><th class="num">Places</th><th class="num">Montant</th><th>Statut</th><th>Source</th><th><span class="muted">Actions</span></th></tr></thead><tbody>' +
+      list.map(function(b){ var d = dep(b.departureId) || {}; var e = exc(d.excursionId) || {}; var p = pickupOf(b); return '<tr><td><strong>' + esc(b.name) + '</strong><div class="muted small">' + esc(b.phone || b.email || '') + '</div></td><td>' + esc(e.name || '—') + '<div class="muted small">' + esc(fmtDate(d.date, { day:'numeric', month:'short', year:'numeric' })) + '</div></td><td>' + esc(p.name) + '<div class="muted small">' + esc(hhmm(p.time)) + '</div></td><td class="num">' + num(b.qty) + '</td><td class="num">' + money2(num(b.amount)) + '</td><td>' + bpill(b.status) + '</td><td>' + esc(b.source || '—') + '</td><td><div class="row" style="flex-wrap:nowrap;gap:6px"><button type="button" class="btn small" data-act="bk-msg" data-id="' + esc(b.id) + '">Messages</button><button type="button" class="btn small" data-act="bk-edit" data-id="' + esc(b.id) + '"' + dis() + '>Modifier</button></div></td></tr>'; }).join('') +
+      '</tbody></table></div>';
+  }
+
+  // --- Base clients ---
+  function normKey(b){ var k = String(b.email || '').trim().toLowerCase(); if(!k) k = String(b.phone || '').replace(/\D/g,''); if(!k) k = String(b.name || '').trim().toLowerCase(); return k; }
+  function clientDocId(k){ return 'c_' + String(k).normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'_').slice(0,150); }
+  function crec(id){ for(var i=0;i<S.clients.length;i++) if(S.clients[i].id === id) return S.clients[i]; return null; }
+  function buildClients(){
+    var map = {};
+    S.bookings.forEach(function(b){
+      if(b.status !== 'payee' || b.anonymized) return;
+      var d = dep(b.departureId); if(!d || d.status === 'annule') return;
+      var k = normKey(b); if(!k) return;
+      var id = clientDocId(k);
+      var c = map[id] || (map[id] = { id:id, key:k, name:'', email:'', phone:'', bookings:[], traveled:0, upcoming:0, spent:0, pax:0, lastTrip:'', firstAt:'', firstSource:'', dests:{}, optOutBk:false, latest:'' });
+      c.bookings.push(b);
+      if(!c.firstAt || (b.createdAt||'') < c.firstAt){ c.firstAt = b.createdAt || ''; c.firstSource = b.source || ''; }
+      if((b.createdAt||'') >= c.latest){ c.latest = b.createdAt || ''; c.name = b.name; if(b.email) c.email = b.email; if(b.phone) c.phone = b.phone; }
+      if(!c.email && b.email) c.email = b.email;
+      if(!c.phone && b.phone) c.phone = b.phone;
+      if(b.optOut) c.optOutBk = true;
+      c.spent += num(b.amount); c.pax += num(b.qty);
+      var n = daysUntil(d.date);
+      if(n != null && n <= -1){ c.traveled++; if(d.date > c.lastTrip) c.lastTrip = d.date; var e = exc(d.excursionId); if(e) c.dests[e.id] = e.name; }
+      else c.upcoming++;
+    });
+    return Object.keys(map).map(function(id){
+      var c = map[id], r = crec(id) || {};
+      c.rec = r; c.optOutEmail = !!r.optOutEmail || c.optOutBk; c.optOutSms = !!r.optOutSms || c.optOutBk;
+      c.satisfaction = num(r.satisfaction);
+      c.lastActivity = c.lastTrip || String(c.latest || '').slice(0,10);
+      c.sinceLast = c.lastTrip ? -daysUntil(c.lastTrip) : null;
+      c.old = !!c.lastActivity && daysUntil(c.lastActivity) < -1095;
+      c.isDemo = c.bookings.some(function(b){ return b.demo; });
+      return c;
+    }).sort(function(a,b){ return (b.lastActivity||'').localeCompare(a.lastActivity||''); });
+  }
+  function segments(){
+    var list = [
+      ['voyage','Ont voyagé', function(c){ return c.traveled >= 1; }],
+      ['fideles','Fidèles (2 excursions ou plus)', function(c){ return c.traveled >= 2; }],
+      ['avenir','Pas encore partis', function(c){ return c.traveled === 0; }],
+      ['inactifs','Sans voyage depuis 6 mois', function(c){ return c.traveled >= 1 && c.sinceLast > 180; }],
+      ['satisfaits','Très satisfaits (4 ou 5 sur 5)', function(c){ return c.satisfaction >= 4; }]
+    ];
+    S.excursions.forEach(function(e){ list.push(['dest:' + e.id, 'Déjà allés à ' + e.name, function(c){ return !!c.dests[e.id]; }]); });
+    list.push(['tous','Tous les clients', function(){ return true; }]);
+    return list;
+  }
+  function segOf(id){ return segments().filter(function(x){ return x[0] === id; })[0] || segments()[0]; }
+  function segFn(id){ return segOf(id)[2]; }
+  function segLabel(id){ return segOf(id)[1]; }
+  function reachable(list, channel){ return list.filter(function(c){ return channel === 'sms' ? (c.phone && !c.optOutSms) : (c.email && !c.optOutEmail); }); }
+
+  function viewClients(){
+    var all = buildClients();
+    var traveled = all.filter(function(c){ return c.traveled >= 1; });
+    var fid = traveled.filter(function(c){ return c.traveled >= 2; });
+    var mailable = reachable(traveled, 'email');
+    var olds = all.filter(function(c){ return c.old; });
+    var h = '<div class="head"><div><h1>Clients</h1><p class="muted">Chaque voyageur entre dans la base le lendemain de son excursion, quand part la demande d’avis.</p></div><div class="row">' + (downloads ? '<button type="button" class="btn" data-act="cl-export"' + (all.length ? '' : ' disabled') + '>Exporter ce segment (CSV)</button>' : '') + '<button type="button" class="btn primary" data-act="camp-new"' + dis() + '>Créer une campagne</button></div></div>';
+    h += '<div class="kpis">' + kpi(traveled.length, 'clients ayant voyagé') + kpi(mailable.length, 'joignables par e-mail') + kpi(fid.length, 'clients fidèles') + kpi(traveled.length ? money(traveled.reduce(function(s,c){ return s + c.spent; }, 0) / traveled.length) : '—', 'dépensé en moyenne par client') + '</div>';
+    if(olds.length) h += '<div class="note warn banner">' + plural(olds.length, 'client') + ' sans activité depuis plus de 3 ans : la CNIL recommande d’effacer leurs données (bouton « Effacer ses données » dans la fiche).</div>';
+    if(!all.length) return h + '<div class="card empty"><p class="muted">La base est vide pour l’instant. Les clients apparaîtront ici après leur première excursion. Chargez la démo pour voir un exemple.</p></div>';
+    h += '<div class="chips" role="group" aria-label="Segments">' + segments().map(function(s){ var n = all.filter(s[2]).length; return '<button type="button" class="chip" data-act="seg" data-seg="' + esc(s[0]) + '" aria-pressed="' + (S.seg === s[0]) + '">' + esc(s[1]) + '<span class="c">' + n + '</span></button>'; }).join('') + '</div>';
+    var q = S.cq.trim().toLowerCase();
+    var list = all.filter(segFn(S.seg)).filter(function(c){ return !q || (c.name + ' ' + c.email + ' ' + c.phone).toLowerCase().indexOf(q) >= 0; });
+    h += '<div class="filters" role="search"><input type="search" id="c-q" placeholder="Rechercher un client" aria-label="Rechercher un client" value="' + esc(S.cq) + '"></div>';
+    if(!list.length) return h + '<div class="card empty"><p class="muted">Aucun client dans ce segment.</p></div>';
+    return h + '<div class="card tablewrap"><table><thead><tr><th>Client</th><th>Excursions faites</th><th class="num">Dépensé</th><th>Dernier voyage</th><th>Venu par</th><th>Satisfaction</th><th>Offres</th></tr></thead><tbody>' +
+      list.map(function(c){
+        var dests = Object.keys(c.dests).map(function(k){ return c.dests[k]; }).join(', ');
+        return '<tr class="click" data-act="cl-open" data-id="' + esc(c.id) + '"><td><button type="button" class="namebtn" data-act="cl-open" data-id="' + esc(c.id) + '">' + esc(c.name) + '</button>' + (c.isDemo ? ' <span class="tag">DÉMO</span>' : '') + '<div class="muted small">' + esc(c.email || c.phone || '') + '</div></td>' +
+          '<td>' + c.traveled + (c.upcoming ? ' <span class="muted small">+' + c.upcoming + ' à venir</span>' : '') + '<div class="muted small">' + esc(dests || '—') + '</div></td>' +
+          '<td class="num">' + money(c.spent) + '</td><td>' + (c.lastTrip ? esc(fmtDate(c.lastTrip, { day:'numeric', month:'short', year:'numeric' })) : '—') + '</td><td>' + esc(c.firstSource || '—') + '</td>' +
+          '<td>' + (c.satisfaction ? c.satisfaction + ' / 5' : '<span class="muted">—</span>') + '</td>' +
+          '<td>' + (c.optOutEmail ? '<span class="pill neutral">Refusées</span>' : (c.email ? '<span class="pill ok">Acceptées</span>' : '<span class="pill neutral">Pas d’e-mail</span>')) + '</td></tr>';
+      }).join('') + '</tbody></table></div>';
+  }
+  function clientForm(id){
+    var c = buildClients().filter(function(x){ return x.id === id; })[0]; if(!c) return;
+    var r = c.rec || {};
+    var hist = c.bookings.slice().sort(function(a,b){ return ((dep(b.departureId)||{}).date||'').localeCompare((dep(a.departureId)||{}).date||''); }).map(function(b){ var d = dep(b.departureId) || {}, e = exc(d.excursionId) || {}; return line((e.name || '?') + ' · ' + fmtDate(d.date, { day:'numeric', month:'short', year:'numeric' }) + ' · ' + plural(num(b.qty), 'place') + (b.promoCode ? ' · code ' + b.promoCode : ''), money2(num(b.amount))); }).join('');
+    var body = '<div class="lines">' + line('E-mail', esc(c.email || '—')) + line('Téléphone', esc(c.phone || '—')) + line('Client depuis', c.firstAt ? esc(new Date(c.firstAt).toLocaleDateString('fr-FR')) : '—') + line('Venu par', esc(c.firstSource || '—')) + line('Total dépensé', money2(c.spent)) + '</div>' +
+      '<div><h3 style="margin-bottom:4px">Historique</h3><div class="lines">' + hist + '</div></div>' +
+      '<fieldset><legend>Offres commerciales</legend>' + (c.optOutBk ? '<p class="muted small" style="margin:0 0 8px">Le client a refusé les offres lors d’une réservation.</p>' : '') +
+        '<label class="check"><input type="checkbox" name="optOutEmail"' + (c.optOutEmail ? ' checked' : '') + (c.optOutBk ? ' disabled' : '') + '> Ne plus lui envoyer d’offres par e-mail</label>' +
+        '<label class="check" style="margin-top:8px"><input type="checkbox" name="optOutSms"' + (c.optOutSms ? ' checked' : '') + (c.optOutBk ? ' disabled' : '') + '> Ne plus lui envoyer d’offres par SMS</label></fieldset>' +
+      '<div class="fields">' + sel('Satisfaction (note de l’e-mail d’avis)', 'satisfaction', [['','Pas de note'],['5','5 / 5'],['4','4 / 5'],['3','3 / 5'],['2','2 / 5'],['1','1 / 5']], r.satisfaction ? String(r.satisfaction) : '') + '</div>' +
+      '<div class="field"><label for="f_notes">Notes internes</label><textarea id="f_notes" name="notes" placeholder="Ex. voyage en famille, préfère les départs de nuit">' + esc(r.notes || '') + '</textarea></div>';
+    var foot = '<button type="submit" class="btn danger" value="erase"' + dis() + '>Effacer ses données</button><span class="spacer"></span><button type="button" class="btn" data-close>Fermer</button><button type="submit" class="btn primary" value="save"' + dis() + '>Enregistrer</button>';
+    openDialog(c.name, body, foot, function(form, action){
+      if(action === 'erase'){ eraseClient(c); return; }
+      var data = { key: c.key, optOutEmail: !!form.elements.optOutEmail.checked, optOutSms: !!form.elements.optOutSms.checked, satisfaction: fv(form,'satisfaction') ? Math.round(num(fv(form,'satisfaction'))) : null, notes: fv(form,'notes'), demo: c.isDemo, updatedAt: new Date().toISOString() };
+      busy(form, true);
+      saveDoc('clients', c.id, data).then(function(){ dlg.close(); toast('Fiche client enregistrée'); }).catch(function(err){ busy(form,false); writeErr(err); });
+    });
+  }
+  function eraseClient(c){
+    dlg.close();
+    confirmBox('Effacer les données de ' + c.name + ' ?', 'Nom, e-mail et téléphone seront retirés de ' + plural(c.bookings.length, 'réservation') + '. Les montants restent pour la comptabilité. Cette action est définitive.', 'Effacer ses données').then(function(ok){
+      if(!ok) return;
+      var chain = Promise.resolve();
+      c.bookings.forEach(function(b){ var data = Object.assign({}, b); delete data.id; data.name = 'Client effacé'; data.email = ''; data.phone = ''; data.notes = ''; data.anonymized = true; data.updatedAt = new Date().toISOString(); chain = chain.then(function(){ return saveDoc('bookings', b.id, data); }); });
+      chain = chain.then(function(){ return crec(c.id) ? delDoc('clients', c.id) : null; });
+      chain.then(function(){ toast('Données du client effacées'); }).catch(writeErr);
+    });
+  }
+
+  // --- Campagnes ---
+  function campResults(cp){
+    var code = String(cp.promoCode || '').trim().toUpperCase();
+    if(!code) return null;
+    var bs = S.bookings.filter(function(b){ return b.status === 'payee' && String(b.promoCode || '').trim().toUpperCase() === code; });
+    return { count: bs.length, pax: bs.reduce(function(s,b){ return s + num(b.qty); }, 0), ca: bs.reduce(function(s,b){ return s + num(b.amount); }, 0) };
+  }
+  function perso(t, c){ return String(t || '').replace(/\{prenom\}/gi, firstName(c ? c.name : 'Camille')); }
+  function campaignMail(cp, c){
+    var body = String(cp.body || '').split(/\n{2,}/).map(function(p){ return '<p>' + esc(perso(p, c)).replace(/\n/g, '<br>') + '</p>'; }).join('');
+    return '<div class="top"><b>LGD</b><span>PARIS</span></div><div class="in"><h2>' + esc(perso(cp.title || cp.subject, c)) + '</h2>' + body +
+      (cp.promoCode ? '<div class="box" style="text-align:center"><p style="margin:0 0 4px;color:#4E6B65">Votre code</p><p class="big" style="letter-spacing:2px">' + esc(String(cp.promoCode).toUpperCase()) + '</p>' + (cp.offer ? '<p style="margin:0">' + esc(cp.offer) + '</p>' : '') + '</div>' : '') +
+      '<a class="cta" href="#" onclick="return false">' + esc(cp.cta || 'Voir les excursions') + '</a><p>À bientôt,<br>L’équipe LGD Paris</p></div>' +
+      '<div class="foot">LGD Paris · 9 rue Hélène Boucher, 91550 Paray-Vieille-Poste<br>Vous recevez cet e-mail car vous avez voyagé avec LGD Paris. <a href="#" onclick="return false" style="color:#147566">Se désabonner</a></div>';
+  }
+  function campaignSms(cp, c){
+    return 'LGD Paris : ' + perso(cp.body, c).replace(/\s+/g, ' ').trim() + (cp.promoCode ? ' Code ' + String(cp.promoCode).toUpperCase() + (cp.offer ? ' : ' + cp.offer : '') + '.' : '') + ' STOP au [numéro]';
+  }
+  function viewCampaigns(){
+    var all = buildClients();
+    var h = '<div class="head"><div><h1>Campagnes</h1><p class="muted">Offres, promos et newsletters envoyées à vos clients, et ce qu’elles rapportent.</p></div><div class="row"><button type="button" class="btn primary" data-act="camp-new"' + dis() + '>Nouvelle campagne</button></div></div>';
+    var list = S.campaigns.slice().sort(function(a,b){ return (b.createdAt||'').localeCompare(a.createdAt||''); });
+    if(!list.length) return h + '<div class="card empty"><h2>Aucune campagne</h2><p class="muted">Choisissez un segment de clients, écrivez votre offre avec un code promo, puis suivez les réservations qu’elle génère.</p><button type="button" class="btn primary" data-act="camp-new"' + dis() + '>Nouvelle campagne</button></div>';
+    list.forEach(function(cp){
+      var target = reachable(all.filter(segFn(cp.segment)), cp.channel);
+      var res = campResults(cp), sent = !!cp.sentAt;
+      h += '<div class="card pad camp"><div class="row" style="justify-content:space-between"><div><h2>' + esc(cp.name) + (cp.demo ? ' <span class="tag">DÉMO</span>' : '') + '</h2><p class="muted small" style="margin:2px 0 0">' + (cp.channel === 'sms' ? 'SMS' : 'E-mail') + ' · ' + esc(segLabel(cp.segment)) + (cp.promoCode ? ' · code ' + esc(String(cp.promoCode).toUpperCase()) + (num(cp.discount) ? ' (−' + money(num(cp.discount)) + ' par personne)' : '') : '') + '</p></div>' +
+        '<div class="row">' + (sent ? '<span class="pill ok">Envoyée le ' + esc(new Date(cp.sentAt).toLocaleDateString('fr-FR')) + '</span>' : '<span class="pill warn">Brouillon</span>') + '<button type="button" class="btn small" data-act="camp-edit" data-id="' + esc(cp.id) + '"' + dis() + '>Modifier</button></div></div>' +
+        '<div class="stats"><div><b>' + (sent ? num(cp.sentCount) : target.length) + '</b><span>' + (sent ? 'destinataires' : 'destinataires possibles') + '</span></div>' +
+        '<div><b>' + (res ? res.count : '—') + '</b><span>réservations avec le code</span></div><div><b>' + (res ? res.pax : '—') + '</b><span>passagers</span></div><div><b>' + (res ? money(res.ca) : '—') + '</b><span>encaissé TTC</span></div></div>' +
+        '<div class="row"><button type="button" class="btn small" data-act="camp-preview" data-id="' + esc(cp.id) + '">Aperçu</button>' + (downloads ? '<button type="button" class="btn small" data-act="camp-export" data-id="' + esc(cp.id) + '"' + (target.length ? '' : ' disabled') + '>Exporter les destinataires (CSV)</button>' : '') + (sent ? '' : '<button type="button" class="btn small primary" data-act="camp-sent" data-id="' + esc(cp.id) + '"' + (target.length ? dis() : ' disabled') + '>Marquer comme envoyée</button>') + '</div></div>';
+    });
+    return h + '<p class="muted small">L’envoi réel se fait depuis votre outil d’e-mailing (Brevo par exemple) : exportez les destinataires, importez-les, envoyez, puis marquez la campagne comme envoyée ici. Les réservations faites avec le code promo s’affichent automatiquement.</p>';
+  }
+  function campPreview(cp){
+    var target = reachable(buildClients().filter(segFn(cp.segment)), cp.channel), c = target[0] || null, body;
+    if(cp.channel === 'sms'){ var t = campaignSms(cp, c), len = t.length, parts = len <= 160 ? 1 : Math.ceil(len / 153); body = '<div class="mailbody" style="border-radius:12px"><div class="phone"><div class="from">LGD Paris</div><div class="bubble">' + esc(t) + '</div><div class="smscount">' + len + ' caractères · ' + plural(parts, 'SMS') + ' par destinataire</div></div></div>'; }
+    else body = '<div class="envelope"><div class="meta"><b>À</b><span>' + esc(c ? c.email : 'exemple@client.fr') + '</span><b>Objet</b><span class="subject">' + esc(perso(cp.subject, c)) + '</span></div><div class="mailbody"><div class="mail">' + campaignMail(cp, c) + '</div></div></div>';
+    openDialog('Aperçu : ' + (cp.name || ''), body, '<button type="button" class="btn" data-close>Fermer</button>', function(){ dlg.close(); });
+  }
+  function campForm(cp){
+    var isNew = !cp;
+    cp = cp || { channel:'email', segment: S.view === 'clients' ? S.seg : 'voyage', subject:'{prenom}, votre prochaine escapade vous attend', title:'Envie de repartir ?', body:'Bonjour {prenom},\n\nMerci encore d’avoir voyagé avec nous. Pour votre prochaine excursion, profitez d’une offre réservée à nos clients.', promoCode:'', offer:'', cta:'Voir les excursions' };
+    var body = '<div class="fields">' + fld('Nom de la campagne', 'name', cp.name, 'text', ' required placeholder="Ex. Relance printemps Bruges"') + sel('Canal', 'channel', [['email','E-mail'],['sms','SMS']], cp.channel) + '</div>' +
+      sel('Destinataires', 'segment', segments().map(function(s){ return [s[0], s[1]]; }), cp.segment) + '<p class="muted small" id="camp-count" style="margin:-6px 0 0"></p>' +
+      fld('Objet de l’e-mail', 'subject', cp.subject, 'text', '', '{prenom} est remplacé par le prénom du client.') + fld('Titre dans l’e-mail', 'title', cp.title) +
+      '<div class="field"><label for="f_body">Message</label><textarea id="f_body" name="body" style="min-height:120px">' + esc(cp.body || '') + '</textarea><span class="hint">Pour un SMS, restez court : 160 caractères par SMS.</span></div>' +
+      '<div class="fields">' + fld('Code promo', 'promoCode', cp.promoCode, 'text', ' placeholder="Ex. RETOUR10"', 'Sert à mesurer les réservations générées.') + fld('Réduction par personne (€)', 'discount', cp.discount, 'number', ' min="0" step="1"', 'Déduite automatiquement au paiement en ligne avec le code.') + fld('Offre (texte affiché)', 'offer', cp.offer, 'text', ' placeholder="Ex. 10 € de réduction par personne"') + fld('Texte du bouton', 'cta', cp.cta) + '</div>';
+    var form = openDialog(isNew ? 'Nouvelle campagne' : 'Modifier la campagne', body, footer(!isNew), function(form, action){
+      if(action === 'delete'){ busy(form,true); delDoc('campaigns', cp.id).then(function(){ dlg.close(); toast('Campagne supprimée'); }).catch(function(err){ busy(form,false); writeErr(err); }); return; }
+      if(!fv(form,'name')){ toast('Donnez un nom à la campagne.'); return; }
+      var data = { name: fv(form,'name'), channel: fv(form,'channel'), segment: fv(form,'segment'), subject: fv(form,'subject'), title: fv(form,'title'), body: fv(form,'body'), promoCode: fv(form,'promoCode').toUpperCase(), discount: num(fv(form,'discount')), offer: fv(form,'offer'), cta: fv(form,'cta'),
+        createdAt: cp.createdAt || new Date().toISOString(), sentAt: cp.sentAt || null, sentCount: cp.sentCount || 0, demo: !!cp.demo, updatedAt: new Date().toISOString() };
+      busy(form,true);
+      saveDoc('campaigns', isNew ? null : cp.id, data).then(function(){ dlg.close(); S.view = 'campagnes'; render(); toast(isNew ? 'Campagne créée' : 'Campagne enregistrée'); }).catch(function(err){ busy(form,false); writeErr(err); });
+    });
+    var upd = function(){ var all = buildClients().filter(segFn(form.elements.segment.value)); var n = reachable(all, form.elements.channel.value).length; document.getElementById('camp-count').textContent = plural(all.length, 'client') + ' dans ce segment, ' + n + ' joignable' + (n > 1 ? 's' : '') + ' par ' + (form.elements.channel.value === 'sms' ? 'SMS' : 'e-mail') + ' (ceux qui ont refusé les offres sont exclus).'; };
+    form.elements.segment.addEventListener('change', upd); form.elements.channel.addEventListener('change', upd); upd();
+  }
+  function markSent(cp){
+    var n = reachable(buildClients().filter(segFn(cp.segment)), cp.channel).length;
+    confirmBox('Marquer comme envoyée ?', 'À faire une fois la campagne réellement envoyée depuis votre outil d’e-mailing, à ' + plural(n, 'destinataire') + '.', 'Marquer comme envoyée').then(function(ok){
+      if(!ok) return;
+      var data = Object.assign({}, cp); delete data.id; data.sentAt = new Date().toISOString(); data.sentCount = n;
+      saveDoc('campaigns', cp.id, data).then(function(){ toast('Campagne marquée comme envoyée'); }).catch(writeErr);
+    });
+  }
+  function camp(id){ return S.campaigns.filter(function(x){ return x.id === id; })[0]; }
+  function csvOf(rows){ return '\ufeff' + rows.map(function(r){ return r.map(function(c){ var s = String(c == null ? '' : c); return /[";\n]/.test(s) ? '"' + s.replace(/"/g,'""') + '"' : s; }).join(';'); }).join('\r\n'); }
+  function saveCsv(name, rows, okMsg){
+    if(!downloads) return;
+    downloads.save({ filename: name, data: csvOf(rows) }).then(function(r){ if(r && r.status === 'saved') toast(okMsg); }).catch(function(err){ if(err && err.code === 'rate_limited') toast('Un téléchargement est déjà en cours.'); else if(err && err.code !== 'declined') toast('L’export n’est pas disponible ici.'); });
+  }
+  function slug(s){ return String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,''); }
+  function clientRows(list){
+    return [['EMAIL','PRENOM','NOM','SMS','NB_EXCURSIONS','DERNIERE_EXCURSION','DESTINATIONS','DEPENSE','SOURCE','OFFRES_EMAIL','OFFRES_SMS']].concat(list.map(function(c){
+      var parts = String(c.name || '').trim().split(/\s+/), prenom = parts.shift() || '', nom = parts.join(' ');
+      var tel = String(c.phone || '').replace(/\s+/g, ''); if(/^0[67]\d{8}$/.test(tel)) tel = '+33' + tel.slice(1);
+      return [c.email, prenom, nom, tel, c.traveled, c.lastTrip, Object.keys(c.dests).map(function(k){ return c.dests[k]; }).join(' / '), c.spent.toFixed(2).replace('.', ','), c.firstSource, c.optOutEmail ? 'non' : 'oui', c.optOutSms ? 'non' : 'oui'];
+    }));
+  }
+
+  // --- Excursions ---
+  function viewExcursions(){
+    var h = '<div class="head"><div><h1>Excursions</h1><p class="muted">Prix, points de prise en charge, coûts et seuil de rentabilité de chaque destination.</p></div><div class="row"><button type="button" class="btn primary" data-act="exc-new"' + dis() + '>Nouvelle excursion</button></div></div>';
+    if(!S.excursions.length) return h + '<div class="card empty"><p class="muted">Aucune excursion. Démarrez avec vos trois fiches ou créez-en une.</p><button type="button" class="btn primary" data-act="seed"' + dis() + '>Créer Amsterdam, Bruges et Strasbourg</button></div>';
+    S.excursions.slice().sort(function(a,b){ return (a.name||'').localeCompare(b.name||''); }).forEach(function(e){
+      var fc = costsOf(e), pht = num(e.price)/(1+TVA/100), ads = num(e.adsBudget), cost = fc.total + ads, cap = num(e.capacity) || 55;
+      var be = pht > 0 ? Math.ceil(cost / pht) : 0;
+      var rows = [be, Math.round(cap*0.7), Math.round(cap*0.8), Math.round(cap*0.9), cap].filter(function(v,i,a){ return v > 0 && a.indexOf(v) === i; }).sort(function(a,b){ return a-b; });
+      var nDeps = S.departures.filter(function(d){ return d.excursionId === e.id; }).length;
+      var pks = excPickups(e);
+      h += '<div class="card pad" style="margin-bottom:14px"><div class="row" style="justify-content:space-between;margin-bottom:6px"><div><h2>' + esc(e.name) + '</h2><p class="muted small" style="margin:2px 0 0">' + money2(num(e.price)) + ' TTC par personne · ' + cap + ' places' + (e.returnTime ? ' · retour vers ' + esc(hhmm(e.returnTime)) : '') + ' · ' + plural(nDeps, 'départ') + '</p></div><button type="button" class="btn small" data-act="exc-edit" data-id="' + esc(e.id) + '"' + dis() + '>Modifier</button></div>' +
+        '<h3 style="margin:12px 0 2px">Prise en charge habituelle</h3><div class="stops">' + pks.map(function(p){ return '<div class="stop"><span class="t">' + esc(hhmm(p.time)) + '</span><span class="dot" aria-hidden="true"></span><span><span class="n">' + esc(p.name) + '</span><br><span class="a">' + esc(p.address || 'Adresse à compléter') + '</span></span><span></span></div>'; }).join('') + '</div>' +
+        '<div class="grid2" style="margin-top:8px"><div><h3 style="margin-bottom:4px">Coûts d’un départ</h3><div class="lines">' +
+          line('Carburant (' + num(e.km) + ' km × ' + num(e.conso) + ' L/100 × ' + money2(num(e.fuelPrice)) + ')', money2(fc.fuel)) + line('Péages', money2(fc.tolls)) + line('Conducteur(s)', money2(fc.drivers)) + line('Parking', money2(fc.parking)) + line('Hôtel conducteur', money2(fc.hotel)) +
+          (fc.other ? line('Autres frais', money2(fc.other)) : '') + line('Budget pub', money2(ads)) + '<div class="line total"><span>Total</span><span>' + money2(cost) + '</span></div></div></div>' +
+        '<div><h3 style="margin-bottom:4px">Simulation</h3><div class="tablewrap"><table class="simtable"><thead><tr><th>Passagers</th><th class="num">CA TTC</th><th class="num">CA HT</th><th class="num">Résultat HT</th></tr></thead><tbody>' +
+          rows.map(function(n){ var ttc = n*num(e.price), ht = ttc/(1+TVA/100), r = ht - cost; return '<tr><td>' + n + (n === be ? ' <span class="muted small">(seuil)</span>' : '') + '</td><td class="num">' + money(ttc) + '</td><td class="num">' + money(ht) + '</td><td class="num ' + (r >= 0 ? 'pos' : 'neg') + '">' + signed(r) + '</td></tr>'; }).join('') +
+          '</tbody></table></div><p class="muted small" style="margin:8px 0 0">TVA de ' + TVA + ' % appliquée sur toutes les excursions.</p></div></div></div>';
+    });
+    return h;
+  }
+
+  // --- Messages clients (simulation) ---
+  function sampleBooking(){
+    var d = S.departures.slice().sort(function(a,b){ return (a.date||'').localeCompare(b.date||''); })[0];
+    var e = d ? exc(d.excursionId) : S.excursions[0];
+    var fakeDep = d || { id:'__exemple', excursionId: e ? e.id : '', date: addDays(todayISO(), 21) };
+    return { b: { id:'EXEMPLE', departureId: fakeDep.id, name:'Camille Martin', email:'camille.martin@exemple.fr', phone:'06 12 34 56 78', qty:2, amount: 2*num(e && e.price, 59), status:'payee', source:'Instagram' }, d: fakeDep, e: e || { name:'Amsterdam', price:59 } };
+  }
+  function ctxOf(b){
+    var d = dep(b.departureId), e = d ? exc(d.excursionId) : null;
+    if(!d || !e){ var s = sampleBooking(); return { b:b, d:s.d, e:s.e, p: excPickups(s.e)[0] || { name:'Point de départ', address:'', time:'' } }; }
+    return { b:b, d:d, e:e, p: pickupOf(b) };
+  }
+  function message(type, c){
+    var b = c.b, d = c.d, e = c.e, p = c.p;
+    var fn = esc(firstName(b.name));
+    var when = esc(whenLabel(d.date, p.time));
+    var shortDate = fmtDate(d.date, { weekday:'long', day:'numeric', month:'long' });
+    var night = p.time && parseInt(p.time.split(':')[0],10) < 5;
+    var idLine = e.idRequired ? '<li>Une carte d’identité ou un passeport en cours de validité pour chaque voyageur</li>' : '';
+    var practical = String(e.practical || '').split('\n').filter(function(x){ return x.trim(); }).map(function(x){ return '<li>' + esc(x.trim()) + '</li>'; }).join('');
+    var addr = p.address ? '<a href="' + esc(mapsUrl(p.address)) + '" target="_blank" rel="noopener" style="color:#147566">' + esc(p.address) + '</a>' : '<em>adresse communiquée prochainement</em>';
+    var top = '<div class="top"><b>LGD</b><span>PARIS</span></div>';
+    var foot = '<div class="foot">LGD Paris · 9 rue Hélène Boucher, 91550 Paray-Vieille-Poste · ' + CONTACT_TEL + ' · ' + CONTACT_MAIL + '<br>Réservation ' + esc(ref(b)) + ' · Conditions générales de vente : [lien à ajouter]<br>Vous recevrez nos offres d’excursions par e-mail et SMS. Vous pouvez vous y opposer à tout moment : <a href="#" onclick="return false" style="color:#147566">se désabonner</a>.</div>';
+    var recap = '<div class="box">' +
+      '<div class="r"><span>Excursion</span><span>' + esc(e.name) + '</span></div>' +
+      '<div class="r"><span>Départ</span><span>' + esc(fmtDate(d.date, { weekday:'long', day:'numeric', month:'long', year:'numeric' })) + '</span></div>' +
+      '<div class="r"><span>Prise en charge</span><span>' + esc(hhmm(p.time)) + ' · ' + esc(p.name) + '</span></div>' +
+      '<div class="r"><span>Voyageurs</span><span>' + num(b.qty) + '</span></div>' +
+      '<div class="r"><span>Montant payé</span><span>' + money2(num(b.amount)) + ' TTC</span></div>' +
+      '<div class="r"><span>N° de réservation</span><span>' + esc(ref(b)) + '</span></div></div>';
+    var out = { channel:'mail' };
+    if(type === 'confirmation'){
+      out.when = 'Immédiatement après le paiement';
+      out.subject = 'Réservation confirmée : ' + e.name + ', ' + shortDate;
+      out.html = top + '<div class="in"><h2>C’est réservé, ' + fn + ' !</h2><p>Votre paiement de ' + money2(num(b.amount)) + ' a bien été reçu. Voici le récapitulatif de votre excursion.</p>' + recap +
+        '<p class="big">' + esc(hhmm(p.time)) + ' · ' + esc(p.name) + '</p><p>' + addr + '</p>' +
+        '<div class="alert">Départ ' + when + '. Merci d’arriver 15 minutes avant : le car ne peut pas attendre.</div>' +
+        ((idLine || practical) ? '<p><strong>À prévoir</strong></p><ul>' + idLine + practical + '</ul>' : '') +
+        (e.returnTime ? '<p>Retour prévu vers ' + esc(hhmm(e.returnTime)) + ' au point de prise en charge.</p>' : '') +
+        '<p>Vous recevrez un rappel la veille du départ. Une question ? Répondez à cet e-mail ou appelez-nous au ' + CONTACT_TEL + '.</p><p>À très bientôt,<br>L’équipe LGD Paris</p></div>' + foot;
+    } else if(type === 'rappel'){
+      out.when = 'La veille du départ à 10h00, soit le ' + fmtDate(addDays(d.date, -1), { weekday:'long', day:'numeric', month:'long' });
+      out.subject = (night ? 'Départ cette nuit pour ' : 'C’est demain : votre excursion à ') + e.name;
+      out.html = top + '<div class="in"><h2>' + (night ? 'On part cette nuit, ' : 'C’est demain, ') + fn + ' !</h2><p>Petit rappel pour votre excursion à ' + esc(e.name) + '.</p>' +
+        '<div class="box"><p class="big">' + esc(hhmm(p.time)) + '</p><p style="margin:0 0 4px"><strong>' + esc(p.name) + '</strong></p><p style="margin:0">' + addr + '</p></div>' +
+        '<div class="alert">Départ ' + when + '. Soyez sur place 15 minutes avant, le car part à l’heure.</div>' +
+        (p.address ? '<a class="cta" href="' + esc(mapsUrl(p.address)) + '" target="_blank" rel="noopener">Voir le point de rendez-vous</a>' : '') +
+        '<p><strong>Avant de partir</strong></p><ul>' + idLine + practical + '<li>Votre numéro de réservation : ' + esc(ref(b)) + '</li></ul>' +
+        '<p>Un empêchement ou un retard ? Appelez-nous au ' + CONTACT_TEL + '.</p><p>Bon voyage,<br>L’équipe LGD Paris</p></div>' + foot;
+    } else if(type === 'sms'){
+      out.channel = 'sms';
+      out.when = 'La veille du départ à 10h00, en même temps que l’e-mail';
+      out.text = 'LGD Paris : rappel, départ pour ' + e.name + ' ' + whenLabel(d.date, p.time) + ', ' + p.name + (p.address ? ' (' + p.address + ')' : '') + '. Soyez là 15 min avant.' + (e.idRequired ? ' Pièce d’identité obligatoire.' : '') + ' Infos : ' + CONTACT_TEL;
+    } else if(type === 'annulation'){
+      out.when = 'Quand vous passez le départ en « Annulé »';
+      out.subject = 'Départ annulé : ' + e.name + ' du ' + shortDate;
+      out.html = top + '<div class="in"><h2>Votre départ est annulé</h2><p>Bonjour ' + fn + ',</p><p>Nous sommes désolés : le départ pour ' + esc(e.name) + ' prévu le ' + esc(shortDate) + ' ne pourra pas avoir lieu.</p>' +
+        '<div class="box"><div class="r"><span>Remboursement</span><span>' + money2(num(b.amount)) + '</span></div><div class="r"><span>Sur</span><span>la carte utilisée pour payer</span></div><div class="r"><span>Délai</span><span>5 à 10 jours ouvrés</span></div></div>' +
+        '<p>Vous préférez partir à une autre date ? Répondez simplement à cet e-mail, nous vous réservons une place sur le prochain départ.</p><p>Toutes nos excuses pour ce contretemps,<br>L’équipe LGD Paris</p></div>' + foot;
+    } else {
+      out.when = 'Le lendemain du départ à 18h00, soit le ' + fmtDate(addDays(d.date, 1), { weekday:'long', day:'numeric', month:'long' });
+      out.subject = 'Comment s’est passée votre journée à ' + e.name + ' ?';
+      out.html = top + '<div class="in"><h2>Merci d’avoir voyagé avec nous, ' + fn + ' !</h2><p>Nous espérons que votre journée à ' + esc(e.name) + ' vous a plu.</p><p><strong>Notez votre journée en un clic :</strong></p><div class="rate"><a href="#" onclick="return false">1</a><a href="#" onclick="return false">2</a><a href="#" onclick="return false">3</a><a href="#" onclick="return false">4</a><a href="#" onclick="return false">5</a></div><p class="small" style="color:#5A706B">Votre note est enregistrée dans votre fiche client.</p><p>Votre avis compte beaucoup pour nous et aide d’autres voyageurs à nous choisir. Cela prend une minute :</p>' +
+        '<a class="cta" href="#" onclick="return false">Laisser un avis sur Google</a><p class="small" style="color:#5A706B">[Lien vers votre fiche Google à ajouter]</p><p>À bientôt pour une prochaine escapade,<br>L’équipe LGD Paris</p></div>' + foot;
+    }
+    return out;
+  }
+  function viewMessages(){
+    var h = '<div class="head"><div><h1>Messages clients</h1><p class="muted">Les e-mails et SMS envoyés automatiquement à chaque voyageur.' + (IS_PROD ? ' Ils partent tout seuls depuis le serveur ; voici leur aperçu.' : ' Aperçu uniquement : rien n’est envoyé pour l’instant.') + '</p></div></div>';
+    h += '<div class="flow">' +
+      '<div class="card"><span class="when">À la réservation</span><span class="what">E-mail de confirmation</span><span class="muted small">Récapitulatif, point et heure de prise en charge, à prévoir.</span></div>' +
+      '<div class="card"><span class="when">La veille à 10h00</span><span class="what">E-mail et SMS de rappel</span><span class="muted small">Heure, adresse avec lien vers la carte, numéro à appeler.</span></div>' +
+      '<div class="card"><span class="when">Si le départ est annulé</span><span class="what">E-mail d’annulation</span><span class="muted small">Montant et délai du remboursement, proposition d’une autre date.</span></div>' +
+      '<div class="card"><span class="when">Le lendemain du départ, 18h00</span><span class="what">Demande d’avis</span><span class="muted small">Lien vers votre fiche Google pour récolter des avis.</span></div></div>';
+
+    var list = S.bookings.slice().sort(function(a,b){ return (b.createdAt||'').localeCompare(a.createdAt||''); });
+    var b = bk(S.msg.bookingId) || list[0];
+    var isSample = !b;
+    var c;
+    if(isSample){ var sm = sampleBooking(); c = { b: sm.b, d: sm.d, e: sm.e, p: (sm.d && sm.d.id !== '__exemple') ? pickupsOf(sm.d)[0] : (excPickups(sm.e)[0] || { name:'Point de départ', address:'', time:'01:00' }) }; }
+    else c = ctxOf(b);
+
+    h += '<div class="card pad"><div class="row" style="justify-content:space-between"><h2>Aperçu pour un voyageur</h2>' +
+      (list.length ? '<select id="m-bk" aria-label="Voyageur" style="min-height:42px;padding:0 12px;border:1px solid var(--line);border-radius:9px;background:var(--surface);max-width:100%">' + list.map(function(x){ var d = dep(x.departureId) || {}; var e = exc(d.excursionId) || {}; return '<option value="' + esc(x.id) + '"' + (b && x.id === b.id ? ' selected' : '') + '>' + esc(x.name + ' · ' + (e.name || '?') + ' · ' + fmtDate(d.date, { day:'numeric', month:'short' })) + '</option>'; }).join('') + '</select>' : '<span class="muted small">Exemple fictif : ajoutez une réservation ou chargez la démo pour voir vos vrais voyageurs.</span>') + '</div>' +
+      '<div class="mailtabs" role="group" aria-label="Type de message">' + MTYPES.map(function(t){ return '<button type="button" class="btn small" data-act="m-type" data-type="' + t[0] + '" aria-pressed="' + (S.msg.type === t[0]) + '">' + esc(t[1]) + '</button>'; }).join('') + '</div>';
+
+    var m = message(S.msg.type, c);
+    if(m.channel === 'sms'){
+      var len = m.text.length, parts = len <= 160 ? 1 : Math.ceil(len / 153);
+      h += '<div class="envelope"><div class="meta"><b>Envoi</b><span>' + esc(m.when) + '</span><b>À</b><span>' + esc(c.b.phone || 'Pas de téléphone renseigné') + '</span></div><div class="mailbody"><div class="phone"><div class="from">LGD Paris</div><div class="bubble">' + esc(m.text) + '</div><div class="smscount">' + len + ' caractères · ' + plural(parts, 'SMS') + ' facturé' + (parts > 1 ? 's' : '') + '</div></div></div></div>';
+    } else {
+      h += '<div class="envelope"><div class="meta"><b>Envoi</b><span>' + esc(m.when) + '</span><b>De</b><span>LGD Paris &lt;' + CONTACT_MAIL + '&gt;</span><b>À</b><span>' + esc(c.b.email || 'Pas d’e-mail renseigné : le message ne pourra pas partir') + '</span><b>Objet</b><span class="subject">' + esc(m.subject) + '</span></div><div class="mailbody"><div class="mail">' + m.html + '</div></div></div>';
+    }
+    h += '</div>';
+
+    // Envois programmés
+    var sched = [];
+    S.departures.forEach(function(d){
+      if(d.status === 'annule') return;
+      var paid = bookingsOf(d.id).filter(function(x){ return x.status === 'payee'; });
+      var e = exc(d.excursionId) || {};
+      var r = addDays(d.date, -1), n = daysUntil(r);
+      if(n != null && n >= 0) sched.push({ date:r, label:'Rappel e-mail + SMS', what: (e.name || '?') + ' du ' + fmtDate(d.date, { day:'numeric', month:'short' }), count: paid.length, demo:d.demo });
+    });
+    sched.sort(function(a,b){ return a.date.localeCompare(b.date); });
+    h += '<div class="card pad" style="margin-top:16px"><h2 style="margin-bottom:6px">Prochains envois programmés</h2>' +
+      (sched.length ? '<div class="sched">' + sched.map(function(s){ return '<div class="s"><span><strong>' + esc(fmtDate(s.date, { weekday:'short', day:'numeric', month:'short' })) + '</strong> à 10h00</span><span>' + esc(s.label) + ' · ' + esc(s.what) + (s.demo ? ' <span class="tag">DÉMO</span>' : '') + '</span><span class="muted">' + plural(s.count, 'voyageur') + '</span></div>'; }).join('') + '</div>' : '<p class="muted" style="margin:0">Aucun rappel à venir. Ils apparaîtront ici dès qu’un départ aura des réservations.</p>') +
+      '</div>';
+    return h;
+  }
+
+  // --- Publicités ---
+  function viewAds(){
+    var plat = [ { key:'meta', label:'Meta (Instagram, Facebook)', sources:['Instagram','Facebook'] }, { key:'tiktok', label:'TikTok', sources:['TikTok'] }, { key:'google', label:'Google', sources:['Google'] }, { key:'other', label:'Autre publicité', sources:[] } ];
+    var paid = S.bookings.filter(function(b){ return b.status === 'payee'; });
+    var h = '<div class="head"><div><h1>Publicités</h1><p class="muted">Ce que chaque plateforme coûte et rapporte, tous départs confondus.</p></div></div>';
+    var tS = 0, tP = 0, tC = 0;
+    var rows = plat.map(function(p){
+      var spend = S.departures.reduce(function(s,d){ return s + num((d.ads||{})[p.key]); }, 0);
+      var bs = paid.filter(function(b){ return p.sources.indexOf(b.source) >= 0; });
+      var pax = bs.reduce(function(s,b){ return s + num(b.qty); }, 0), ca = bs.reduce(function(s,b){ return s + num(b.amount); }, 0);
+      tS += spend; tP += pax; tC += ca;
+      return '<tr><td><strong>' + esc(p.label) + '</strong></td><td class="num">' + money(spend) + '</td><td class="num">' + pax + '</td><td class="num">' + money(ca) + '</td><td class="num">' + (pax ? money2(spend/pax) : '—') + '</td><td class="num">' + (spend ? (ca/spend).toFixed(1).replace('.', ',') + ' €' : '—') + '</td></tr>';
+    });
+    h += '<div class="kpis">' + kpi(money(tS), 'dépensé en publicité') + kpi(tP ? money2(tS/tP) : '—', 'coût moyen par passager venu d’une pub') + kpi(tS ? (tC/tS).toFixed(1).replace('.', ',') + ' €' : '—', 'encaissés pour 1 € de pub') + '</div>';
+    h += '<div class="card tablewrap"><table><thead><tr><th>Plateforme</th><th class="num">Dépensé</th><th class="num">Passagers</th><th class="num">Encaissé TTC</th><th class="num">Coût par passager</th><th class="num">Pour 1 € de pub</th></tr></thead><tbody>' + rows.join('') + '</tbody></table></div>';
+    var opax = paid.filter(function(b){ return ['Site direct','Téléphone','Autre'].indexOf(b.source) >= 0 || !b.source; }).reduce(function(s,b){ return s + num(b.qty); }, 0);
+    return h + '<p class="muted small" style="margin-top:12px">' + plural(opax, 'passager') + ' venu' + (opax > 1 ? 's' : '') + ' sans pub (site direct, téléphone, autre). Les dépenses se saisissent dans chaque départ (« Modifier le départ »).</p>';
+  }
+
+  var RUNGIS = '25 avenue Robert Schuman, 94150 Rungis';
+  var SEED = {
+    amsterdam: { name:'Amsterdam', price:59, capacity:55, returnTime:'05:00', pickups:[{ id:'p0', name:'Dépôt LGD Paris, Rungis', address:RUNGIS, time:'01:00' }, { id:'p1', name:'Paris, Porte Maillot', address:'', time:'01:45' }], idRequired:true, practical:'Un coussin et une petite couverture pour le trajet de nuit\nDe bonnes chaussures pour marcher en ville\nVos billets de musée réservés à l’avance (Rijksmuseum, Van Gogh, Anne Frank)', km:1045, conso:25, fuelPrice:2.30, tolls:160, driverCost:250, drivers:1, parking:50, hotel:80, other:0, adsBudget:200 },
+    bruges: { name:'Bruges', price:45, capacity:55, returnTime:'01:00', pickups:[{ id:'p0', name:'Dépôt LGD Paris, Rungis', address:RUNGIS, time:'05:00' }], idRequired:true, practical:'De bonnes chaussures pour marcher dans la vieille ville\nUn peu de monnaie pour les gaufres et les chocolats', km:650, conso:25, fuelPrice:2.30, tolls:80, driverCost:200, drivers:1, parking:44, hotel:80, other:0, adsBudget:200 },
+    strasbourg: { name:'Marché de Noël de Strasbourg', price:59, capacity:55, returnTime:'04:00', pickups:[{ id:'p0', name:'Dépôt LGD Paris, Rungis', address:RUNGIS, time:'04:00' }], idRequired:false, practical:'Des vêtements chauds : le marché de Noël se visite en extérieur\nUn sac pour vos achats', km:1000, conso:25, fuelPrice:2.30, tolls:208, driverCost:250, drivers:1, parking:43, hotel:80, other:0, adsBudget:200 }
+  };
+  function seedExcursions(){
+    var chain = Promise.resolve();
+    Object.keys(SEED).forEach(function(id){ chain = chain.then(function(){ return exc(id) ? null : saveDoc('excursions', id, Object.assign({}, SEED[id], { updatedAt: new Date().toISOString() })); }); });
+    chain.then(function(){ toast('Excursions Amsterdam, Bruges et Strasbourg créées'); }).catch(writeErr);
+  }
+
+  // ---------- Formulaires ----------
+  var dlg = document.getElementById('dlg');
+  function openDialog(title, bodyHTML, footHTML, onSubmit){
+    dlg.innerHTML = '<form class="dlg" method="dialog" novalidate><header><h2>' + esc(title) + '</h2><button type="button" class="iconbtn" data-close aria-label="Fermer"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button></header><div class="body">' + bodyHTML + '</div><footer>' + footHTML + '</footer></form>';
+    var form = dlg.querySelector('form');
+    form.addEventListener('submit', function(ev){ ev.preventDefault(); onSubmit(form, ev.submitter && ev.submitter.value); });
+    dlg.querySelectorAll('[data-close]').forEach(function(b){ b.addEventListener('click', function(){ dlg.close(); }); });
+    if(typeof dlg.showModal === 'function') dlg.showModal(); else dlg.setAttribute('open','');
+    var first = form.querySelector('input:not([type=hidden]), select, textarea'); if(first) first.focus();
+    return form;
+  }
+  function fld(label, name, value, type, extra, hint){ return '<div class="field"><label for="f_' + name + '">' + esc(label) + '</label><input id="f_' + name + '" name="' + name + '" type="' + (type || 'text') + '" value="' + esc(value == null ? '' : value) + '"' + (extra || '') + '>' + (hint ? '<span class="hint">' + esc(hint) + '</span>' : '') + '</div>'; }
+  function sel(label, name, options, value){ return '<div class="field"><label for="f_' + name + '">' + esc(label) + '</label><select id="f_' + name + '" name="' + name + '">' + options.map(function(o){ return '<option value="' + esc(o[0]) + '"' + (String(o[0]) === String(value) ? ' selected' : '') + '>' + esc(o[1]) + '</option>'; }).join('') + '</select></div>'; }
+  function fv(form, name){ var el = form.elements[name]; return el ? String(el.value).trim() : ''; }
+  function footer(withDelete){ return (withDelete ? '<button type="submit" class="btn danger" value="delete">Supprimer</button><span class="spacer"></span>' : '') + '<button type="button" class="btn" data-close>Annuler</button><button type="submit" class="btn primary" value="save">Enregistrer</button>'; }
+  function busy(form, on){ form.querySelectorAll('button[type=submit]').forEach(function(b){ b.disabled = on; }); }
+  function confirmBox(title, text, okLabel){
+    return new Promise(function(resolve){
+      var done = false;
+      openDialog(title, '<p style="margin:0">' + esc(text) + '</p>', '<button type="button" class="btn" data-close>Annuler</button><button type="submit" class="btn primary" value="ok">' + esc(okLabel) + '</button>', function(){ done = true; dlg.close(); resolve(true); });
+      dlg.addEventListener('close', function h(){ dlg.removeEventListener('close', h); if(!done) resolve(false); });
+    });
+  }
+
+  // Éditeur des points de prise en charge (jusqu'à 4)
+  function pickupsEditor(list){
+    var h = '<fieldset><legend>Points de prise en charge</legend><p class="muted small" style="margin:0 0 6px">Dans l’ordre de passage du car. Laissez une ligne vide pour ne pas l’utiliser.</p><div class="pkhead" aria-hidden="true"><span>Nom du point</span><span>Adresse</span><span>Heure</span></div>';
+    for(var i=0;i<MAX_PK;i++){
+      var p = list[i] || {};
+      h += '<div class="pkrow"><input type="hidden" name="pk_id_' + i + '" value="' + esc(p.id || '') + '">' +
+        '<input name="pk_name_' + i + '" aria-label="Nom du point ' + (i+1) + '" placeholder="' + (i === 0 ? 'Ex. Dépôt LGD Paris, Rungis' : 'Ex. Paris, Porte Maillot') + '" value="' + esc(p.name || '') + '">' +
+        '<input name="pk_addr_' + i + '" aria-label="Adresse du point ' + (i+1) + '" placeholder="Adresse" value="' + esc(p.address || '') + '">' +
+        '<input name="pk_time_' + i + '" type="time" aria-label="Heure du point ' + (i+1) + '" value="' + esc(p.time || '') + '"></div>';
+    }
+    return h + '</fieldset>';
+  }
+  function readPickups(form){
+    var out = [];
+    for(var i=0;i<MAX_PK;i++){
+      var name = fv(form, 'pk_name_' + i);
+      if(!name) continue;
+      out.push({ id: fv(form, 'pk_id_' + i) || uid(), name: name, address: fv(form, 'pk_addr_' + i), time: fv(form, 'pk_time_' + i) });
+    }
+    return out;
+  }
+
+  function excForm(e){
+    var isNew = !e;
+    e = e || { capacity:55, conso:25, fuelPrice:2.30, drivers:1, adsBudget:200, idRequired:false };
+    var body = '<div class="fields">' + fld('Nom de l’excursion', 'name', e.name, 'text', ' required') + fld('Prix TTC par personne (€)', 'price', e.price, 'number', ' step="0.01" min="0" required', 'TVA de 10 % incluse.') + fld('Places dans le car', 'capacity', e.capacity, 'number', ' min="1" max="120"') + fld('Heure de retour prévue', 'returnTime', e.returnTime, 'time') + '</div>' +
+      pickupsEditor(excPickups(isNew ? null : e)) +
+      '<fieldset><legend>Infos pour les voyageurs</legend><div class="fields">' + sel('Pièce d’identité obligatoire', 'idRequired', [['oui','Oui (voyage à l’étranger)'],['non','Non']], e.idRequired ? 'oui' : 'non') + '</div>' +
+      '<div class="field" style="margin-top:12px"><label for="f_practical">À prévoir (une ligne par conseil)</label><textarea id="f_practical" name="practical" placeholder="Ex. Un coussin et une petite couverture pour le trajet de nuit">' + esc(e.practical || '') + '</textarea><span class="hint">Repris dans l’e-mail de confirmation et le rappel.</span></div></fieldset>' +
+      '<fieldset><legend>Coûts d’un départ</legend><div class="fields">' +
+        fld('Distance aller-retour (km)', 'km', e.km, 'number', ' min="0"') + fld('Consommation (L/100 km)', 'conso', e.conso, 'number', ' step="0.1" min="0"') + fld('Prix du gazole (€/L)', 'fuelPrice', e.fuelPrice, 'number', ' step="0.01" min="0"') +
+        fld('Péages aller-retour (€)', 'tolls', e.tolls, 'number', ' step="0.01" min="0"') + fld('Coût par conducteur (€)', 'driverCost', e.driverCost, 'number', ' step="0.01" min="0"') + fld('Nombre de conducteurs', 'drivers', e.drivers, 'number', ' min="1" max="4"') +
+        fld('Parking (€)', 'parking', e.parking, 'number', ' step="0.01" min="0"') + fld('Hôtel conducteur (€)', 'hotel', e.hotel, 'number', ' step="0.01" min="0"') + fld('Autres frais (€)', 'other', e.other, 'number', ' step="0.01" min="0"') +
+        fld('Budget pub par départ (€)', 'adsBudget', e.adsBudget, 'number', ' step="1" min="0"', 'Repris par défaut dans chaque nouveau départ.') + '</div></fieldset>';
+    var hasDeps = !isNew && S.departures.some(function(d){ return d.excursionId === e.id; });
+    openDialog(isNew ? 'Nouvelle excursion' : 'Modifier l’excursion', body, footer(!isNew), function(form, action){
+      if(action === 'delete'){
+        if(hasDeps){ toast('Supprimez d’abord les départs de cette excursion.'); return; }
+        busy(form, true); delDoc('excursions', e.id).then(function(){ dlg.close(); toast('Excursion supprimée'); }).catch(function(err){ busy(form,false); writeErr(err); }); return;
+      }
+      if(!fv(form,'name') || !(num(fv(form,'price')) > 0)){ toast('Indiquez au moins un nom et un prix.'); return; }
+      var pks = readPickups(form);
+      if(!pks.length){ toast('Ajoutez au moins un point de prise en charge.'); return; }
+      var data = { name: fv(form,'name'), price: num(fv(form,'price')), capacity: Math.round(num(fv(form,'capacity'),55)), returnTime: fv(form,'returnTime'), pickups: pks,
+        idRequired: fv(form,'idRequired') === 'oui', practical: fv(form,'practical'),
+        km: num(fv(form,'km')), conso: num(fv(form,'conso')), fuelPrice: num(fv(form,'fuelPrice')), tolls: num(fv(form,'tolls')), driverCost: num(fv(form,'driverCost')), drivers: Math.max(1, Math.round(num(fv(form,'drivers'),1))),
+        parking: num(fv(form,'parking')), hotel: num(fv(form,'hotel')), other: num(fv(form,'other')), adsBudget: num(fv(form,'adsBudget')), demo: !!e.demo, updatedAt: new Date().toISOString() };
+      busy(form, true);
+      saveDoc('excursions', isNew ? null : e.id, data).then(function(){ dlg.close(); toast(isNew ? 'Excursion créée' : 'Excursion enregistrée'); }).catch(function(err){ busy(form,false); writeErr(err); });
+    });
+  }
+
+  function depForm(d){
+    if(!S.excursions.length){ excForm(); return; }
+    var isNew = !d, e0 = S.excursions[0];
+    d = d || { excursionId: e0.id, date:'', status:'vente', adsPlanned: num(e0.adsBudget), ads:{} };
+    var ads = d.ads || {};
+    var body = '<div class="fields">' + sel('Excursion', 'excursionId', S.excursions.map(function(e){ return [e.id, e.name]; }), d.excursionId) + fld('Date du départ', 'date', d.date, 'date', ' required', 'Départ à 01h00 dans la nuit de vendredi à samedi : indiquez le samedi.') + sel('Statut', 'status', Object.keys(DSTATUS).map(function(k){ return [k, DSTATUS[k]]; }), d.status) + fld('Places à vendre', 'capacity', d.capacity, 'number', ' min="1" max="120"', 'Vide = capacité du car.') + '</div>' +
+      '<div id="pk-wrap">' + pickupsEditor(pickupsOf(d)) + '</div>' +
+      '<div class="fields">' + fld('Km ajoutés pour les prises en charge', 'extraKm', d.extraKm, 'number', ' min="0"', 'Détour par rapport au trajet de base, ajouté au carburant.') + '</div>' +
+      '<fieldset><legend>Organisation</legend><div class="fields">' + fld('Véhicule', 'vehicle', d.vehicle, 'text', ' placeholder="Ex. autocar 55 places, immatriculation"') + fld('Conducteur(s)', 'driversNames', d.driversNames) + '</div></fieldset>' +
+      '<fieldset><legend>Décision de maintien</legend><div class="fields">' + fld('Minimum de passagers', 'minPax', d.minPax, 'number', ' min="0"', 'Vide = seuil de rentabilité.') + fld('Date limite de décision', 'decisionDate', d.decisionDate, 'date') + '</div></fieldset>' +
+      '<fieldset><legend>Publicité</legend><div class="fields">' + fld('Budget prévu (€)', 'adsPlanned', d.adsPlanned, 'number', ' min="0"', 'Utilisé tant qu’aucune dépense n’est saisie.') + fld('Dépensé Meta (€)', 'ads_meta', ads.meta, 'number', ' step="0.01" min="0"') + fld('Dépensé TikTok (€)', 'ads_tiktok', ads.tiktok, 'number', ' step="0.01" min="0"') + fld('Dépensé Google (€)', 'ads_google', ads.google, 'number', ' step="0.01" min="0"') + fld('Autre pub (€)', 'ads_other', ads.other, 'number', ' step="0.01" min="0"') + '</div></fieldset>' +
+      '<div class="field"><label for="f_notes">Notes</label><textarea id="f_notes" name="notes">' + esc(d.notes || '') + '</textarea></div>';
+    var nb = isNew ? 0 : bookingsOf(d.id).length;
+    var wasStatus = d.status;
+    var form = openDialog(isNew ? 'Nouveau départ' : 'Modifier le départ', body, footer(!isNew), function(form, action){
+      if(action === 'delete'){
+        if(nb){ toast('Ce départ a des réservations : passez-le plutôt en « Annulé ».'); return; }
+        busy(form,true); delDoc('departures', d.id).then(function(){ dlg.close(); S.view = 'departs'; render(); toast('Départ supprimé'); }).catch(function(err){ busy(form,false); writeErr(err); }); return;
+      }
+      if(!fv(form,'date')){ toast('Choisissez une date.'); return; }
+      var pks = readPickups(form);
+      if(!pks.length){ toast('Ajoutez au moins un point de prise en charge.'); return; }
+      var removed = pickupsOf(d).filter(function(p){ return !pks.some(function(q){ return q.id === p.id; }); }).map(function(p){ return p.id; });
+      if(!isNew && removed.length && bookingsOf(d.id).some(function(b){ return removed.indexOf(b.pickupId) >= 0; })){ toast('Des voyageurs sont inscrits sur un point retiré : changez d’abord leur point de prise en charge.'); return; }
+      var data = { excursionId: fv(form,'excursionId'), date: fv(form,'date'), status: fv(form,'status'), capacity: fv(form,'capacity') ? Math.round(num(fv(form,'capacity'))) : null, pickups: pks, extraKm: num(fv(form,'extraKm')),
+        vehicle: fv(form,'vehicle'), driversNames: fv(form,'driversNames'), minPax: fv(form,'minPax') ? Math.round(num(fv(form,'minPax'))) : null, decisionDate: fv(form,'decisionDate'),
+        adsPlanned: num(fv(form,'adsPlanned')), ads: { meta: num(fv(form,'ads_meta')), tiktok: num(fv(form,'ads_tiktok')), google: num(fv(form,'ads_google')), other: num(fv(form,'ads_other')) },
+        notes: fv(form,'notes'), demo: !!d.demo, updatedAt: new Date().toISOString() };
+      busy(form,true);
+      saveDoc('departures', isNew ? null : d.id, data).then(function(id){
+        dlg.close();
+        if(!isNew && wasStatus !== 'annule' && data.status === 'annule'){
+          var n = bookingsOf(d.id).filter(function(b){ return b.status === 'payee'; }).length;
+          toast('Départ annulé : ' + plural(n, 'e-mail') + ' d’annulation ' + (IS_PROD ? 'part' + (n > 1 ? 'ent' : '') + ' automatiquement. Remboursez depuis Stripe.' : 'partirai' + (n > 1 ? 'ent' : 't') + ' (simulation).'));
+        } else toast(isNew ? 'Départ créé' : 'Départ enregistré');
+        S.view = 'depart'; S.depId = id; render();
+      }).catch(function(err){ busy(form,false); writeErr(err); });
+    });
+    if(isNew){
+      form.elements.excursionId.addEventListener('change', function(){
+        var e = exc(this.value); if(!e) return;
+        form.elements.adsPlanned.value = num(e.adsBudget);
+        document.getElementById('pk-wrap').innerHTML = pickupsEditor(excPickups(e));
+      });
+    }
+  }
+
+  function bkForm(b, depId){
+    var isNew = !b;
+    var deps = S.departures.slice().sort(function(a,c){ return (a.date||'').localeCompare(c.date||''); });
+    if(!deps.length) return;
+    b = b ? Object.assign({}, b) : { departureId: depId || deps[0].id, qty:1, status:'payee', source:'Instagram' };
+    var priceOf = function(id){ var d = dep(id); var e = d && exc(d.excursionId); return e ? num(e.price) : 0; };
+    if(isNew) b.amount = priceOf(b.departureId) * b.qty;
+    var pkOptions = function(id){ return pickupsOf(dep(id)).map(function(p){ return [p.id, hhmm(p.time) + ' · ' + p.name]; }); };
+    var body = sel('Départ', 'departureId', deps.map(function(d){ var e = exc(d.excursionId) || {}; return [d.id, (e.name || '?') + ' · ' + fmtDate(d.date, { weekday:'short', day:'numeric', month:'short', year:'numeric' })]; }), b.departureId) +
+      '<div id="pk-sel">' + sel('Point de prise en charge', 'pickupId', pkOptions(b.departureId), b.pickupId) + '</div>' +
+      '<div class="fields">' + fld('Nom et prénom', 'name', b.name, 'text', ' required autocomplete="off"') + fld('Téléphone', 'phone', b.phone, 'tel', ' autocomplete="off"', 'Pour le SMS de rappel.') + fld('E-mail', 'email', b.email, 'email', ' autocomplete="off"', 'Pour la confirmation et le rappel.') + '</div>' +
+      '<div class="fields">' + fld('Nombre de places', 'qty', b.qty, 'number', ' min="1" max="55" required') + fld('Montant payé TTC (€)', 'amount', b.amount, 'number', ' step="0.01" min="0"', 'Calculé automatiquement, modifiable.') + '</div>' +
+      '<div class="fields">' + sel('Statut', 'status', Object.keys(BSTATUS).map(function(k){ return [k, BSTATUS[k]]; }), b.status) + sel('Source', 'source', SOURCES.map(function(x){ return [x, x]; }), b.source) + '</div>' +
+      '<div class="fields">' + fld('Code promo', 'promoCode', b.promoCode, 'text', ' placeholder="Ex. RETOUR10"', 'Si le client a utilisé le code d’une campagne.') + '</div>' +
+      '<label class="check"><input type="checkbox" name="optOut"' + (b.optOut ? ' checked' : '') + '> Le client refuse de recevoir nos offres (e-mail et SMS)</label>' +
+      '<div class="field"><label for="f_notes">Notes</label><textarea id="f_notes" name="notes" placeholder="Ex. enfant, besoin particulier">' + esc(b.notes || '') + '</textarea></div>';
+    var form = openDialog(isNew ? 'Nouvelle réservation' : 'Modifier la réservation', body, footer(!isNew), function(form, action){
+      if(action === 'delete'){ busy(form,true); delDoc('bookings', b.id).then(function(){ dlg.close(); toast('Réservation supprimée'); }).catch(function(err){ busy(form,false); writeErr(err); }); return; }
+      if(!fv(form,'name')){ toast('Indiquez le nom du voyageur.'); return; }
+      var qty = Math.max(1, Math.round(num(fv(form,'qty'),1)));
+      var d = dep(fv(form,'departureId')); var s = d ? stats(d) : null;
+      var already = (!isNew && b.departureId === fv(form,'departureId') && b.status === 'payee') ? num(b.qty) : 0;
+      if(s && fv(form,'status') === 'payee' && s.pax - already + qty > s.cap){ toast('Pas assez de places : il en reste ' + Math.max(0, s.cap - s.pax + already) + '.'); return; }
+      var data = { departureId: fv(form,'departureId'), pickupId: fv(form,'pickupId'), name: fv(form,'name'), phone: fv(form,'phone'), email: fv(form,'email'), qty: qty, amount: num(fv(form,'amount')), status: fv(form,'status'), source: fv(form,'source'), notes: fv(form,'notes'),
+        promoCode: fv(form,'promoCode').toUpperCase(), optOut: !!form.elements.optOut.checked, anonymized: !!b.anonymized,
+        createdAt: b.createdAt || new Date().toISOString(), updatedAt: new Date().toISOString(), demo: !!b.demo };
+      busy(form,true);
+      saveDoc('bookings', isNew ? null : b.id, data).then(function(){ dlg.close(); toast(isNew ? (IS_PROD ? 'Réservation ajoutée' : 'Réservation ajoutée · e-mail de confirmation prêt (simulation)') : 'Réservation enregistrée'); }).catch(function(err){ busy(form,false); writeErr(err); });
+    });
+    var recalc = function(){ form.elements.amount.value = (priceOf(form.elements.departureId.value) * Math.max(1, Math.round(num(form.elements.qty.value,1)))).toFixed(2); };
+    form.elements.qty.addEventListener('input', recalc);
+    form.elements.departureId.addEventListener('change', function(){ recalc(); document.getElementById('pk-sel').innerHTML = sel('Point de prise en charge', 'pickupId', pkOptions(this.value), ''); });
+  }
+
+  // ---------- Export de la liste des passagers ----------
+  function exportManifest(d){
+    if(!downloads) return;
+    var e = exc(d.excursionId) || {};
+    var rows = [['Prise en charge','Heure','Nom','Téléphone','E-mail','Places','Statut','Montant TTC','Source','Notes']];
+    pickupsOf(d).forEach(function(p){
+      bookingsOf(d.id).filter(function(b){ return (b.status === 'payee' || b.status === 'attente') && pickupOf(b).id === p.id; }).sort(function(a,c){ return (a.name||'').localeCompare(c.name||''); }).forEach(function(b){
+        rows.push([p.name, hhmm(p.time), b.name, b.phone, b.email, num(b.qty), BSTATUS[b.status] || b.status, num(b.amount).toFixed(2).replace('.', ','), b.source, b.notes]);
+      });
+    });
+    var csv = '\ufeff' + rows.map(function(r){ return r.map(function(c){ var s = String(c == null ? '' : c); return /[";\n]/.test(s) ? '"' + s.replace(/"/g,'""') + '"' : s; }).join(';'); }).join('\r\n');
+    var name = 'passagers-' + (e.name || 'depart').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'') + '-' + (d.date || '') + '.csv';
+    downloads.save({ filename: name, data: csv }).then(function(r){ if(r && r.status === 'saved') toast('Liste exportée'); }).catch(function(err){ if(err && err.code === 'rate_limited') toast('Un téléchargement est déjà en cours.'); else if(err && err.code !== 'declined') toast('L’export n’est pas disponible ici.'); });
+  }
+
+  // ---------- Démo ----------
+  function loadDemo(){
+    var e = S.excursions.filter(function(x){ return /amsterdam/i.test(x.name || ''); })[0] || S.excursions[0];
+    var basePk = excPickups(e)[0] || { id:'p0', name:'Dépôt LGD Paris, Rungis', address:'25 avenue Robert Schuman, 94150 Rungis', time:'01:00' };
+    var pks = [ { id: basePk.id, name: basePk.name, address: basePk.address, time: basePk.time || '01:00' }, { id:'pdemo2', name:'Paris, Porte de la Chapelle (exemple)', address:'Porte de la Chapelle, 75018 Paris', time:'01:40' } ];
+    function sat(offset){ var d = new Date(); d.setDate(d.getDate() + offset); var step = offset > 0 ? 1 : -1; while(d.getDay() !== 6) d.setDate(d.getDate() + step); return isoOf(d); }
+    function mail(n){ return n.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z]+/g,'.') + '@exemple.fr'; }
+    var plans = [
+      { date: sat(-210), status:'termine', ads:{ meta:120, tiktok:60, google:0, other:0 }, rows: [['Camille Martin',2,'Instagram'],['Hugo Moreau',3,'TikTok'],['Sophie Lambert',2,'Instagram'],['Karim Saïdi',4,'Facebook'],['Emma Lefèvre',2,'TikTok'],['Paul Mercier',1,'Site direct'],['Lina Rossi',2,'Instagram'],['Julien Morel',2,'TikTok'],['Aïcha Diallo',3,'Instagram'],['Maxime Robin',2,'TikTok'],['Clara Fabre',4,'Instagram'],['Bastien Noël',2,'Téléphone']] },
+      { date: sat(-35), status:'termine', ads:{ meta:110, tiktok:90, google:0, other:0 }, rows: [['Camille Martin',2,'Instagram'],['Léa Dubois',1,'Instagram'],['Karim Saïdi',2,'Facebook'],['Nora Belkacem',3,'TikTok'],['Antoine Blanc',2,'Instagram'],['Manon Garcia',4,'TikTok'],['Rayan Touré',2,'TikTok'],['Élise Perrin',2,'Instagram'],['Victor Henry',3,'Instagram'],['Zoé Marchand',2,'TikTok'],['Samuel Cohen',4,'Site direct']] },
+      { date: sat(24), status:'vente', ads:{ meta:85, tiktok:60, google:0, other:0 }, rows: [['Camille Martin',2,'Site direct'],['Yanis Benali',2,'TikTok'],['Léa Dubois',1,'Site direct','RETOUR10'],['Hugo Moreau',3,'Site direct','RETOUR10'],['Inès Laurent',2,'Facebook'],['Lucas Girard',4,'Instagram'],['Sarah Haddad',2,'TikTok'],['Nathan Roux',1,'Site direct'],['Chloé Fontaine',2,'Instagram'],['Mehdi Amrani',3,'TikTok'],['Julie Garnier',2,'Téléphone'],['Thomas Petit',2,'Instagram','',true]] }
+    ];
+    var futureId = null;
+    toast('Création de la démo…');
+    var exP = e ? Promise.resolve(e.id) : saveDoc('excursions', null, { name:'Excursion démo', price:59, capacity:55, returnTime:'05:00', pickups:[pks[0]], idRequired:true, practical:'', km:1045, conso:25, fuelPrice:2.30, tolls:160, driverCost:250, drivers:1, parking:50, hotel:80, other:0, adsBudget:200, demo:true });
+    exP.then(function(exId){
+      var ex = exc(exId) || { price:59, adsBudget:200 }, price = num(ex.price || 59);
+      var chain = Promise.resolve();
+      plans.forEach(function(pl, pi){
+        chain = chain.then(function(){
+          return saveDoc('departures', null, { excursionId: exId, date: pl.date, status: pl.status, pickups: pks, extraKm: 12, vehicle:'Autocar 55 places', driversNames:'', minPax:null, decisionDate: addDays(pl.date, -10), adsPlanned: num(ex.adsBudget), ads: pl.ads, notes:'Départ fictif pour tester l’outil.', demo:true });
+        }).then(function(depId){
+          if(pl.status === 'vente') futureId = depId;
+          var c2 = Promise.resolve();
+          pl.rows.forEach(function(r, i){
+            c2 = c2.then(function(){
+              var promo = r[3] || '';
+              return saveDoc('bookings', null, { departureId: depId, pickupId: pks[i % 3 === 0 ? 1 : 0].id, name:r[0], phone:'06 ' + String(10 + pi) + ' 00 00 ' + String(10 + i), email: mail(r[0]), qty:r[1], amount: r[1] * (promo ? price - 10 : price), status: r[4] ? 'attente' : 'payee', source:r[2], promoCode: promo, optOut: r[0] === 'Paul Mercier', notes:'', createdAt: new Date(parseDate(addDays(pl.date, -(30 - i*2))).getTime() + 36e6).toISOString(), demo:true });
+            });
+          });
+          return c2;
+        });
+      });
+      return chain;
+    }).then(function(){
+      var recs = [['Camille Martin',5,''],['Karim Saïdi',4,'Voyage en famille, aime les départs de nuit'],['Antoine Blanc',5,''],['Manon Garcia',3,'A trouvé le trajet retour long']];
+      var c3 = Promise.resolve();
+      recs.forEach(function(r){ c3 = c3.then(function(){ var k = mail(r[0]); return saveDoc('clients', clientDocId(k), { key:k, satisfaction:r[1], notes:r[2], optOutEmail:false, optOutSms:false, demo:true }); }); });
+      return c3.then(function(){
+        return saveDoc('campaigns', null, { name:'Relance des clients de l’été', channel:'email', segment:'voyage', subject:'{prenom}, on repart ensemble ?', title:'Envie de repartir ?', body:'Bonjour {prenom},\n\nMerci d’avoir voyagé avec LGD Paris. Amsterdam repart cet hiver : profitez d’une réduction réservée à nos clients.', promoCode:'RETOUR10', discount:10, offer:'10 € de réduction par personne', cta:'Réserver ma place', createdAt: new Date(Date.now() - 22*864e5).toISOString(), sentAt: new Date(Date.now() - 20*864e5).toISOString(), sentCount: 21, demo:true });
+      });
+    }).then(function(){ S.view = 'depart'; S.depId = futureId; render(); toast('Démo prête : 3 départs, une base clients et une campagne'); }).catch(writeErr);
+  }
+  function clearDemo(){
+    confirmBox('Effacer la démo ?', 'Les départs, réservations, clients et campagnes marqués DÉMO seront supprimés. Vos vraies données ne sont pas touchées.', 'Effacer la démo').then(function(ok){
+      if(!ok) return;
+      var t = [];
+      S.bookings.forEach(function(b){ if(b.demo) t.push(['bookings', b.id]); });
+      S.departures.forEach(function(d){ if(d.demo) t.push(['departures', d.id]); });
+      S.clients.forEach(function(c){ if(c.demo) t.push(['clients', c.id]); });
+      S.campaigns.forEach(function(c){ if(c.demo) t.push(['campaigns', c.id]); });
+      S.excursions.forEach(function(e){ if(e.demo && !S.departures.some(function(d){ return d.excursionId === e.id && !d.demo; })) t.push(['excursions', e.id]); });
+      var chain = Promise.resolve();
+      t.forEach(function(x){ chain = chain.then(function(){ return delDoc(x[0], x[1]); }); });
+      chain.then(function(){ S.view = 'departs'; S.msg.bookingId = ''; render(); toast('Démo effacée'); }).catch(writeErr);
+    });
+  }
+
+  // ---------- Événements ----------
+  document.addEventListener('click', function(ev){
+    var t = ev.target.closest('[data-nav],[data-act]');
+    if(!t || dlg.contains(t)) return;
+    var nav = t.getAttribute('data-nav');
+    if(nav){ S.view = nav; S.depId = null; render(); main.focus({ preventScroll:true }); window.scrollTo(0,0); return; }
+    var act = t.getAttribute('data-act'), id = t.getAttribute('data-id');
+    if(act === 'dep-open'){ S.view = 'depart'; S.depId = id; render(); window.scrollTo(0,0); }
+    else if(act === 'dep-new') depForm();
+    else if(act === 'dep-edit') depForm(dep(id));
+    else if(act === 'exc-new') excForm();
+    else if(act === 'exc-edit') excForm(exc(id));
+    else if(act === 'bk-new') bkForm(null, t.getAttribute('data-dep'));
+    else if(act === 'bk-edit'){ var b = bk(id); if(b) bkForm(b); }
+    else if(act === 'bk-msg'){ S.msg.bookingId = id; S.view = 'messages'; render(); window.scrollTo(0,0); }
+    else if(act === 'm-type'){ S.msg.type = t.getAttribute('data-type'); render(); }
+    else if(act === 'manifest') exportManifest(dep(id));
+    else if(act === 'toggle-past'){ S.showPast = !S.showPast; render(); }
+    else if(act === 'demo-load') loadDemo();
+    else if(act === 'demo-clear') clearDemo();
+    else if(act === 'seed') seedExcursions();
+    else if(act === 'logout'){ if(window.firebase) firebase.auth().signOut().then(function(){ location.reload(); }); }
+    else if(act === 'reset-pwd'){ var em = document.getElementById('f_email'); if(!em || !em.value){ toast('Saisissez d’abord votre e-mail.'); } else firebase.auth().sendPasswordResetEmail(em.value.trim()).then(function(){ toast('E-mail de réinitialisation envoyé'); }).catch(function(){ toast('Impossible d’envoyer l’e-mail. Vérifiez l’adresse.'); }); }
+    else if(act === 'seg'){ S.seg = t.getAttribute('data-seg'); render(); }
+    else if(act === 'cl-open') clientForm(id);
+    else if(act === 'cl-export'){ var lst = buildClients().filter(segFn(S.seg)); saveCsv('clients-' + slug(segLabel(S.seg)) + '-' + todayISO() + '.csv', clientRows(lst), 'Clients exportés'); }
+    else if(act === 'camp-new') campForm();
+    else if(act === 'camp-edit') campForm(camp(id));
+    else if(act === 'camp-preview') campPreview(camp(id));
+    else if(act === 'camp-sent') markSent(camp(id));
+    else if(act === 'camp-export'){ var cp = camp(id); if(cp) saveCsv('campagne-' + slug(cp.name) + '.csv', clientRows(reachable(buildClients().filter(segFn(cp.segment)), cp.channel)), 'Destinataires exportés'); }
+  });
+  main.addEventListener('input', function(ev){
+    if(ev.target.id === 'c-q'){ S.cq = ev.target.value; var p2 = ev.target.selectionStart; render(); var cq = document.getElementById('c-q'); if(cq){ cq.focus(); try{ cq.setSelectionRange(p2,p2); }catch(e){} } }
+    if(ev.target.id === 'f-q'){ S.filter.q = ev.target.value; var pos = ev.target.selectionStart; render(); var q = document.getElementById('f-q'); if(q){ q.focus(); try{ q.setSelectionRange(pos,pos); }catch(e){} } }
+  });
+  main.addEventListener('submit', function(ev){
+    if(ev.target.id !== 'login-form') return;
+    ev.preventDefault();
+    var f = ev.target, er = document.getElementById('login-err');
+    er.hidden = true;
+    firebase.auth().signInWithEmailAndPassword(f.elements.email.value.trim(), f.elements.password.value).catch(function(){ er.textContent = 'E-mail ou mot de passe incorrect.'; er.hidden = false; });
+  });
+  main.addEventListener('change', function(ev){
+    if(ev.target.id === 'f-dep'){ S.filter.dep = ev.target.value; render(); }
+    if(ev.target.id === 'f-status'){ S.filter.status = ev.target.value; render(); }
+    if(ev.target.id === 'f-source'){ S.filter.source = ev.target.value; render(); }
+    if(ev.target.id === 'm-bk'){ S.msg.bookingId = ev.target.value; render(); }
+  });
+
+  boot();
+})();
+</script>
+</body>
+</html>
