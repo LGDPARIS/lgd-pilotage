@@ -966,20 +966,41 @@ tr.click{ cursor:pointer; } tr.click:hover td{ background:var(--surface-2); }
     return h + '<p class="muted small" style="margin-top:12px">' + plural(opax, 'passager') + ' venu' + (opax > 1 ? 's' : '') + ' sans pub (site direct, téléphone, autre). Les dépenses se saisissent dans chaque départ (« Modifier le départ »).</p>';
   }
 
-  var RUNGIS = '25 avenue Robert Schuman, 94150 Rungis';
+  var RUNGIS = '1 rue des Vosges, 94150 Rungis', RUNGIS_NAME = 'Gare de Rungis', OLD_RUNGIS = '25 avenue Robert Schuman, 94150 Rungis';
+  var PARKING = 'Parking gratuit à la gare de Rungis : stationnement facile, de nombreuses places à proximité';
   var SEED = {
-    amsterdam: { name:'Amsterdam', price:59, capacity:55, returnTime:'05:00', pickups:[{ id:'p0', name:'Dépôt LGD Paris, Rungis', address:RUNGIS, time:'01:00' }, { id:'p1', name:'Paris, Porte Maillot', address:'', time:'01:45' }], idRequired:true, practical:'Un coussin et une petite couverture pour le trajet de nuit\nDe bonnes chaussures pour marcher en ville\nVos billets de musée réservés à l’avance (Rijksmuseum, Van Gogh, Anne Frank)', km:1045, conso:25, fuelPrice:2.30, tolls:160, driverCost:250, drivers:1, parking:50, hotel:80, other:0, adsBudget:200 },
-    bruges: { name:'Bruges', price:45, capacity:55, returnTime:'01:00', pickups:[{ id:'p0', name:'Dépôt LGD Paris, Rungis', address:RUNGIS, time:'05:00' }], idRequired:true, practical:'Des vêtements chauds : les marchés de Noël se visitent en extérieur\nDe bonnes chaussures pour marcher dans la vieille ville\nUn peu de monnaie pour les gaufres et le chocolat chaud', km:650, conso:25, fuelPrice:2.30, tolls:80, driverCost:200, drivers:1, parking:44, hotel:80, other:0, adsBudget:200 },
-    strasbourg: { name:'Marché de Noël de Strasbourg', price:69, capacity:55, returnTime:'04:00', pickups:[{ id:'p0', name:'Dépôt LGD Paris, Rungis', address:RUNGIS, time:'04:00' }], idRequired:false, practical:'Des vêtements chauds : le marché de Noël se visite en extérieur\nLe petit-déjeuner est offert pendant la pause de 06h00\nUn sac pour vos achats', km:1000, conso:25, fuelPrice:2.30, tolls:208, driverCost:250, drivers:1, parking:43, hotel:100, other:0, adsBudget:200 }
+    amsterdam: { name:'Amsterdam', price:59, capacity:55, returnTime:'05:00', pickups:[{ id:'p0', name:RUNGIS_NAME, address:RUNGIS, time:'01:00' }, { id:'p1', name:'Paris, Porte Maillot', address:'', time:'01:45' }], idRequired:true, practical:PARKING + '\nUn coussin et une petite couverture pour le trajet de nuit\nDe bonnes chaussures pour marcher en ville\nVos billets de musée réservés à l’avance (Rijksmuseum, Van Gogh, Anne Frank)', km:1045, conso:25, fuelPrice:2.30, tolls:160, driverCost:250, drivers:1, parking:50, hotel:80, other:0, adsBudget:200 },
+    bruges: { name:'Bruges', price:45, capacity:55, returnTime:'01:00', pickups:[{ id:'p0', name:RUNGIS_NAME, address:RUNGIS, time:'05:00' }], idRequired:true, practical:PARKING + '\nDes vêtements chauds : les marchés de Noël se visitent en extérieur\nDe bonnes chaussures pour marcher dans la vieille ville\nUn peu de monnaie pour les gaufres et le chocolat chaud', km:650, conso:25, fuelPrice:2.30, tolls:80, driverCost:200, drivers:1, parking:44, hotel:80, other:0, adsBudget:200 },
+    strasbourg: { name:'Marché de Noël de Strasbourg', price:69, capacity:55, returnTime:'04:00', pickups:[{ id:'p0', name:RUNGIS_NAME, address:RUNGIS, time:'04:00' }], idRequired:false, practical:PARKING + '\nDes vêtements chauds : le marché de Noël se visite en extérieur\nLe petit-déjeuner est offert pendant la pause de 06h00\nUn sac pour vos achats', km:1000, conso:25, fuelPrice:2.30, tolls:208, driverCost:250, drivers:1, parking:43, hotel:100, other:0, adsBudget:200 }
   };
   // Programme publié (fiches du Drive « LGD Excursion »)
   var PLAN = [ { ex:'bruges', date:'2026-12-05' }, { ex:'strasbourg', date:'2026-12-12' }, { ex:'amsterdam', date:'2026-12-19' } ];
   function planExc(key){ return exc(key) || S.excursions.filter(function(e){ return !e.demo && new RegExp(key, 'i').test(e.name || ''); })[0] || null; }
+  function isOldPk(p){ return p && (p.address === OLD_RUNGIS || /d[ée]p[ôo]t lgd/i.test(p.name || '')); }
+  function fixPks(list){ return (list || []).map(function(p){ return isOldPk(p) ? Object.assign({}, p, { name:RUNGIS_NAME, address:RUNGIS }) : p; }); }
+  // Données de test : tout ce qui existe avant le lancement (le lancement = premier départ créé par « Tout créer en un clic »)
+  function launched(){ return S.departures.some(function(d){ return d.launch; }); }
+  function isTestTime(){ return !launched(); }
+  function testData(){
+    if(launched()){ var none = { bookings:[], departures:[], clients:[], campaigns:[], excursions:[], total:0 }; ['bookings','departures','clients','campaigns','excursions'].forEach(function(c){ none[c] = S[c].filter(function(x){ return x.demo; }); none.total += none[c].length; }); return none; }
+    var bk = S.bookings.filter(function(b){ return b.demo || isTestTime(b.createdAt); });
+    var bkIds = bk.map(function(b){ return b.id; });
+    var keep = S.bookings.filter(function(b){ return bkIds.indexOf(b.id) < 0; });
+    var dp = S.departures.filter(function(d){ return (d.demo || isTestTime(d.updatedAt)) && !keep.some(function(b){ return b.departureId === d.id; }); });
+    var keepKeys = keep.map(function(b){ return clientDocId(normKey(b) || ''); });
+    var cl = S.clients.filter(function(c){ return keepKeys.indexOf(c.id) < 0; });
+    var cp = S.campaigns.filter(function(c){ return c.demo || isTestTime(c.createdAt); });
+    var ex = S.excursions.filter(function(e){ return e.demo; });
+    return { bookings:bk, departures:dp, clients:cl, campaigns:cp, excursions:ex, total: bk.length + dp.length + cl.length + cp.length + ex.length };
+  }
   function planTodo(){
     var t = [];
     PLAN.forEach(function(pl){
       var e = planExc(pl.ex);
       if(!e){ t.push({ type:'exc', pl:pl }); t.push({ type:'dep', pl:pl }); return; }
+      var pr = String(e.practical || '');
+      if(excPickups(e).some(isOldPk) || pr.indexOf(PARKING) < 0) t.push({ type:'addr', pl:pl, e:e });
+      S.departures.filter(function(d){ var n = daysUntil(d.date); return d.excursionId === e.id && !d.demo && n != null && n >= 0 && (d.pickups || []).some(isOldPk); }).forEach(function(d){ t.push({ type:'depaddr', pl:pl, dep:d }); });
       var deps = S.departures.filter(function(d){ return d.excursionId === e.id && !d.demo && d.status !== 'annule'; });
       if(deps.some(function(d){ return d.date === pl.date; })) return;
       var old = deps.filter(function(d){ var n = daysUntil(d.date); return d.date !== pl.date && n != null && n >= 0 && !bookingsOf(d.id).length; })[0];
@@ -988,28 +1009,49 @@ tr.click{ cursor:pointer; } tr.click:hover td{ background:var(--surface-2); }
     return t;
   }
   function planBanner(){
-    var t = planTodo(); if(!t.length) return '';
+    var td = testData(), tdIds = td.departures.map(function(d){ return d.id; }), t = planTodo().filter(function(x){ return x.type !== 'depaddr' || tdIds.indexOf(x.dep.id) < 0; }).map(function(x){ return x.type === 'move' && tdIds.indexOf(x.dep.id) >= 0 ? { type:'dep', pl:x.pl } : x; }); if(!t.length && !td.total) return '';
     var lbl = { bruges:'Bruges le samedi 5 décembre', strasbourg:'Strasbourg le samedi 12 décembre', amsterdam:'Amsterdam le samedi 19 décembre' };
-    var items = t.map(function(x){ return x.type === 'exc' ? 'Créer l’excursion ' + esc(SEED[x.pl.ex].name) : x.type === 'move' ? 'Déplacer le départ Amsterdam du ' + esc(fmtDate(x.dep.date)) + ' au samedi 19 décembre' : 'Mettre en vente ' + lbl[x.pl.ex]; });
-    return '<div class="card pad" style="margin-bottom:16px;border-left:4px solid var(--accent,#F4A340)"><h2 style="margin-bottom:6px">Programme de décembre à mettre en place</h2><ul class="small" style="margin:0 0 12px 18px">' + items.map(function(i){ return '<li>' + i + '</li>'; }).join('') + '</ul><button type="button" class="btn primary" data-act="plan-dec"' + dis() + '>Tout créer en un clic</button></div>';
+    var items = t.filter(function(x, i){ return x.type !== 'depaddr' || !t.slice(0, i).some(function(y){ return y.type === 'depaddr'; }); }).map(function(x){ return x.type === 'addr' ? 'Point de départ de ' + esc(x.e.name) + ' : Gare de Rungis, 1 rue des Vosges (parking gratuit)' : x.type === 'depaddr' ? 'Mettre la nouvelle adresse sur les départs déjà programmés' : x.type === 'exc' ? 'Créer l’excursion ' + esc(SEED[x.pl.ex].name) : x.type === 'move' ? 'Déplacer le départ Amsterdam du ' + esc(fmtDate(x.dep.date)) + ' au samedi 19 décembre' : 'Mettre en vente ' + lbl[x.pl.ex]; });
+    if(td.total) items.unshift('<strong>Remettre à zéro</strong> : effacer les données de test (' + [plural(td.bookings.length, 'réservation'), plural(td.departures.length, 'départ'), plural(td.clients.length, 'fiche client', 'fiches client'), plural(td.campaigns.length, 'campagne')].join(', ') + ')');
+    return '<div class="card pad" style="margin-bottom:16px;border-left:4px solid var(--accent,#F4A340)"><h2 style="margin-bottom:6px">Remise à zéro et programme de décembre</h2><ul class="small" style="margin:0 0 12px 18px">' + items.map(function(i){ return '<li>' + i + '</li>'; }).join('') + '</ul><button type="button" class="btn primary" data-act="plan-dec"' + dis() + '>' + (td.total ? 'Tout remettre à zéro et créer en un clic' : 'Tout créer en un clic') + '</button></div>';
   }
   function applyPlan(){
-    var t = planTodo(); if(!t.length){ toast('Le programme de décembre est déjà en place'); return; }
+    var td = testData(), chain = Promise.resolve(), gone = 0;
+    if(td.total){
+      ['bookings','departures','clients','campaigns','excursions'].forEach(function(c){ td[c].forEach(function(x){ chain = chain.then(function(){ gone++; return delDoc(c, x.id); }); }); });
+      chain = chain.then(function(){ ['bookings','departures','clients','campaigns','excursions'].forEach(function(c){ var ids = td[c].map(function(x){ return x.id; }); S[c] = S[c].filter(function(x){ return ids.indexOf(x.id) < 0; }); }); });
+    }
+    toast(td.total ? 'Remise à zéro en cours…' : 'Création du programme de décembre…');
+    chain.then(function(){ runPlan(gone); }).catch(writeErr);
+  }
+  function runPlan(gone){
+    var t = planTodo();
+    if(!t.length){ render(); toast(gone ? 'Données de test effacées' : 'Le programme de décembre est déjà en place'); return; }
     var created = {}, chain = Promise.resolve(), n = 0;
     t.forEach(function(x){
       chain = chain.then(function(){
         if(x.type === 'exc'){ created[x.pl.ex] = Object.assign({ id: x.pl.ex }, SEED[x.pl.ex]); return saveDoc('excursions', x.pl.ex, Object.assign({}, SEED[x.pl.ex], { updatedAt: new Date().toISOString() })); }
-        var e = planExc(x.pl.ex) || created[x.pl.ex];
+        if(x.type === 'addr'){
+          var ue = Object.assign({}, x.e, { pickups: fixPks(excPickups(x.e)), updatedAt: new Date().toISOString() }); delete ue.id;
+          var lines = String(ue.practical || '').split('\n').filter(function(l){ return l.trim(); });
+          lines = lines.filter(function(l){ return !/stationnement facile|parking gratuit/i.test(l); }); lines.unshift(PARKING);
+          ue.practical = lines.join('\n'); created[x.pl.ex] = Object.assign({ id: x.e.id }, ue);
+          return saveDoc('excursions', x.e.id, ue);
+        }
+        if(x.type === 'depaddr'){
+          var ud = Object.assign({}, x.dep, { pickups: fixPks(x.dep.pickups), updatedAt: new Date().toISOString() }); delete ud.id;
+          return saveDoc('departures', x.dep.id, ud);
+        }
+        var e = created[x.pl.ex] || planExc(x.pl.ex);
         if(x.type === 'move'){
-          var upd = Object.assign({}, x.dep, { date: x.pl.date, decisionDate: addDays(x.pl.date, -10), status:'vente', updatedAt: new Date().toISOString() }); delete upd.id;
+          var upd = Object.assign({}, x.dep, { pickups: fixPks(x.dep.pickups), date: x.pl.date, decisionDate: addDays(x.pl.date, -10), status:'vente', launch:true, updatedAt: new Date().toISOString() }); delete upd.id;
           n++; return saveDoc('departures', x.dep.id, upd);
         }
-        var pks = excPickups(e).map(function(p){ return { id:p.id, name:p.name, address:p.address || '', time:p.time || '' }; });
-        n++; return saveDoc('departures', null, { excursionId: e.id, date: x.pl.date, status:'vente', capacity:null, pickups: pks, extraKm:0, vehicle:'Autocar 55 places', driversNames:'', minPax:null, decisionDate: addDays(x.pl.date, -10), adsPlanned: num(e.adsBudget), ads:{ meta:0, tiktok:0, google:0, other:0 }, notes:'', demo:false, updatedAt: new Date().toISOString() });
+        var pks = fixPks(excPickups(e)).map(function(p){ return { id:p.id, name:p.name, address:p.address || '', time:p.time || '' }; });
+        n++; return saveDoc('departures', null, { excursionId: e.id, date: x.pl.date, status:'vente', capacity:null, pickups: pks, extraKm:0, vehicle:'Autocar 55 places', driversNames:'', minPax:null, decisionDate: addDays(x.pl.date, -10), adsPlanned: num(e.adsBudget), ads:{ meta:0, tiktok:0, google:0, other:0 }, notes:'', demo:false, launch:true, updatedAt: new Date().toISOString() });
       });
     });
-    toast('Création du programme de décembre…');
-    chain.then(function(){ S.view = 'departs'; render(); toast('Programme de décembre en place : ' + plural(n, 'départ') + ' en vente'); }).catch(writeErr);
+    chain.then(function(){ S.view = 'departs'; render(); toast((gone ? 'Remise à zéro faite. ' : '') + 'Programme de décembre en place : ' + plural(n, 'départ') + ' en vente'); }).catch(writeErr);
   }
   function seedExcursions(){
     var chain = Promise.resolve();
@@ -1047,7 +1089,7 @@ tr.click{ cursor:pointer; } tr.click:hover td{ background:var(--surface-2); }
     for(var i=0;i<MAX_PK;i++){
       var p = list[i] || {};
       h += '<div class="pkrow"><input type="hidden" name="pk_id_' + i + '" value="' + esc(p.id || '') + '">' +
-        '<input name="pk_name_' + i + '" aria-label="Nom du point ' + (i+1) + '" placeholder="' + (i === 0 ? 'Ex. Dépôt LGD Paris, Rungis' : 'Ex. Paris, Porte Maillot') + '" value="' + esc(p.name || '') + '">' +
+        '<input name="pk_name_' + i + '" aria-label="Nom du point ' + (i+1) + '" placeholder="' + (i === 0 ? 'Ex. Gare de Rungis' : 'Ex. Paris, Porte Maillot') + '" value="' + esc(p.name || '') + '">' +
         '<input name="pk_addr_' + i + '" aria-label="Adresse du point ' + (i+1) + '" placeholder="Adresse" value="' + esc(p.address || '') + '">' +
         '<input name="pk_time_' + i + '" type="time" aria-label="Heure du point ' + (i+1) + '" value="' + esc(p.time || '') + '"></div>';
     }
@@ -1120,7 +1162,7 @@ tr.click{ cursor:pointer; } tr.click:hover td{ background:var(--surface-2); }
       var data = { excursionId: fv(form,'excursionId'), date: fv(form,'date'), status: fv(form,'status'), capacity: fv(form,'capacity') ? Math.round(num(fv(form,'capacity'))) : null, pickups: pks, extraKm: num(fv(form,'extraKm')),
         vehicle: fv(form,'vehicle'), driversNames: fv(form,'driversNames'), minPax: fv(form,'minPax') ? Math.round(num(fv(form,'minPax'))) : null, decisionDate: fv(form,'decisionDate'),
         adsPlanned: num(fv(form,'adsPlanned')), ads: { meta: num(fv(form,'ads_meta')), tiktok: num(fv(form,'ads_tiktok')), google: num(fv(form,'ads_google')), other: num(fv(form,'ads_other')) },
-        notes: fv(form,'notes'), demo: !!d.demo, updatedAt: new Date().toISOString() };
+        notes: fv(form,'notes'), demo: !!d.demo, launch: !!d.launch, updatedAt: new Date().toISOString() };
       busy(form,true);
       saveDoc('departures', isNew ? null : d.id, data).then(function(id){
         dlg.close();
@@ -1192,7 +1234,7 @@ tr.click{ cursor:pointer; } tr.click:hover td{ background:var(--surface-2); }
   // ---------- Démo ----------
   function loadDemo(){
     var e = S.excursions.filter(function(x){ return /amsterdam/i.test(x.name || ''); })[0] || S.excursions[0];
-    var basePk = excPickups(e)[0] || { id:'p0', name:'Dépôt LGD Paris, Rungis', address:'25 avenue Robert Schuman, 94150 Rungis', time:'01:00' };
+    var basePk = excPickups(e)[0] || { id:'p0', name:RUNGIS_NAME, address:RUNGIS, time:'01:00' };
     var pks = [ { id: basePk.id, name: basePk.name, address: basePk.address, time: basePk.time || '01:00' }, { id:'pdemo2', name:'Paris, Porte de la Chapelle (exemple)', address:'Porte de la Chapelle, 75018 Paris', time:'01:40' } ];
     function sat(offset){ var d = new Date(); d.setDate(d.getDate() + offset); var step = offset > 0 ? 1 : -1; while(d.getDay() !== 6) d.setDate(d.getDate() + step); return isoOf(d); }
     function mail(n){ return n.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z]+/g,'.') + '@exemple.fr'; }
