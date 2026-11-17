@@ -274,6 +274,7 @@ tr.click{ cursor:pointer; } tr.click:hover td{ background:var(--surface-2); }
   var TVA = 10; // TVA appliquée partout, choix LGD Paris
   var CONTACT_TEL = '01 42 37 95 40';
   var CONTACT_MAIL = 'contact@lgdparis.com';
+  var CGV_URL = 'https://lgdparis.github.io/lgd-excursions/cgv-excursions/';
   var MAX_PK = 4;
 
   var S = {
@@ -485,7 +486,8 @@ tr.click{ cursor:pointer; } tr.click:hover td{ background:var(--surface-2); }
     document.querySelectorAll('[data-nav]').forEach(function(b){ if(b.getAttribute('data-nav') === navView && b.closest('.nav')) b.setAttribute('aria-current','page'); else b.removeAttribute('aria-current'); });
     var hasDemo = S.departures.some(function(d){ return d.demo; });
     var foot = '';
-    if(IS_PROD && S.user) foot = '<span>' + esc(S.user) + '</span><button type="button" class="linkbtn" data-act="logout">Se déconnecter</button>';
+    var cgvLink = '<a class="linkbtn" href="' + CGV_URL + '" target="_blank" rel="noopener">CGV Excursions</a>';
+    if(IS_PROD && S.user) foot = cgvLink + '<span>' + esc(S.user) + '</span><button type="button" class="linkbtn" data-act="logout">Se déconnecter</button>';
     else if(!IS_PROD && S.status === 'ready' && S.canWrite) foot = hasDemo ? '<button type="button" class="linkbtn" data-act="demo-clear">Effacer les données de démo</button>' : '<button type="button" class="linkbtn" data-act="demo-load">Charger une démo</button>';
     document.getElementById('sidefoot').innerHTML = foot;
     if(S.status === 'login'){ main.innerHTML = viewLogin(); var le = document.getElementById('f_email'); if(le) le.focus(); return; }
@@ -522,6 +524,7 @@ tr.click{ cursor:pointer; } tr.click:hover td{ background:var(--surface-2); }
     var live = upcoming.filter(function(d){ return d.status !== 'annule'; });
     var tot = live.reduce(function(a, d){ var s = stats(d); a.pax += s.pax; a.ca += s.caTTC; a.res += s.result; a.risk += (s.st.key === 'risk' ? 1 : 0); return a; }, { pax:0, ca:0, res:0, risk:0 });
     var h = '<div class="head"><div><h1>Départs</h1><p class="muted">Remplissage et rentabilité de chaque départ.</p></div><div class="row"><button type="button" class="btn primary" data-act="dep-new"' + dis() + '>Nouveau départ</button></div></div>';
+    h += planBanner();
     if(!S.excursions.length) return h + '<div class="card empty"><h2>Créez d’abord vos excursions</h2><p class="muted">Une excursion contient le prix, les points de prise en charge et les coûts. Chaque départ s’appuie dessus pour calculer sa rentabilité.</p><button type="button" class="btn primary" data-act="seed"' + dis() + '>Créer Amsterdam, Bruges et Strasbourg</button></div>';
     h += '<div class="kpis">' + kpi(live.length, 'départs à venir') + kpi(tot.pax, 'passagers vendus') + kpi(money(tot.ca), 'encaissé TTC') + kpi('<span class="' + (tot.res >= 0 ? 'pos' : 'neg') + '">' + signed(tot.res) + '</span>', 'résultat HT si les départs partaient aujourd’hui') + '</div>';
     if(tot.risk) h += '<div class="note risk banner">' + plural(tot.risk, 'départ') + ' sous le seuil avec une date de décision proche. Relancez la pub ou décidez de maintenir ou d’annuler.</div>';
@@ -741,7 +744,7 @@ tr.click{ cursor:pointer; } tr.click:hover td{ background:var(--surface-2); }
     return '<div class="top"><b>LGD</b><span>PARIS</span></div><div class="in"><h2>' + esc(perso(cp.title || cp.subject, c)) + '</h2>' + body +
       (cp.promoCode ? '<div class="box" style="text-align:center"><p style="margin:0 0 4px;color:#4E6B65">Votre code</p><p class="big" style="letter-spacing:2px">' + esc(String(cp.promoCode).toUpperCase()) + '</p>' + (cp.offer ? '<p style="margin:0">' + esc(cp.offer) + '</p>' : '') + '</div>' : '') +
       '<a class="cta" href="#" onclick="return false">' + esc(cp.cta || 'Voir les excursions') + '</a><p>À bientôt,<br>L’équipe LGD Paris</p></div>' +
-      '<div class="foot">LGD Paris · 9 rue Hélène Boucher, 91550 Paray-Vieille-Poste<br>Vous recevez cet e-mail car vous avez voyagé avec LGD Paris. <a href="#" onclick="return false" style="color:#147566">Se désabonner</a></div>';
+      '<div class="foot">LGD Paris · 169 avenue du Général de Gaulle, 91550 Paray-Vieille-Poste<br>Vous recevez cet e-mail car vous avez voyagé avec LGD Paris. <a href="#" onclick="return false" style="color:#147566">Se désabonner</a></div>';
   }
   function campaignSms(cp, c){
     return 'LGD Paris : ' + perso(cp.body, c).replace(/\s+/g, ' ').trim() + (cp.promoCode ? ' Code ' + String(cp.promoCode).toUpperCase() + (cp.offer ? ' : ' + cp.offer : '') + '.' : '') + ' STOP au [numéro]';
@@ -813,6 +816,7 @@ tr.click{ cursor:pointer; } tr.click:hover td{ background:var(--surface-2); }
   // --- Excursions ---
   function viewExcursions(){
     var h = '<div class="head"><div><h1>Excursions</h1><p class="muted">Prix, points de prise en charge, coûts et seuil de rentabilité de chaque destination.</p></div><div class="row"><button type="button" class="btn primary" data-act="exc-new"' + dis() + '>Nouvelle excursion</button></div></div>';
+    h += planBanner();
     if(!S.excursions.length) return h + '<div class="card empty"><p class="muted">Aucune excursion. Démarrez avec vos trois fiches ou créez-en une.</p><button type="button" class="btn primary" data-act="seed"' + dis() + '>Créer Amsterdam, Bruges et Strasbourg</button></div>';
     S.excursions.slice().sort(function(a,b){ return (a.name||'').localeCompare(b.name||''); }).forEach(function(e){
       var fc = costsOf(e), pht = num(e.price)/(1+TVA/100), ads = num(e.adsBudget), cost = fc.total + ads, cap = num(e.capacity) || 55;
@@ -854,7 +858,7 @@ tr.click{ cursor:pointer; } tr.click:hover td{ background:var(--surface-2); }
     var practical = String(e.practical || '').split('\n').filter(function(x){ return x.trim(); }).map(function(x){ return '<li>' + esc(x.trim()) + '</li>'; }).join('');
     var addr = p.address ? '<a href="' + esc(mapsUrl(p.address)) + '" target="_blank" rel="noopener" style="color:#147566">' + esc(p.address) + '</a>' : '<em>adresse communiquée prochainement</em>';
     var top = '<div class="top"><b>LGD</b><span>PARIS</span></div>';
-    var foot = '<div class="foot">LGD Paris · 9 rue Hélène Boucher, 91550 Paray-Vieille-Poste · ' + CONTACT_TEL + ' · ' + CONTACT_MAIL + '<br>Réservation ' + esc(ref(b)) + ' · Conditions générales de vente : [lien à ajouter]<br>Vous recevrez nos offres d’excursions par e-mail et SMS. Vous pouvez vous y opposer à tout moment : <a href="#" onclick="return false" style="color:#147566">se désabonner</a>.</div>';
+    var foot = '<div class="foot">LGD Paris · 169 avenue du Général de Gaulle, 91550 Paray-Vieille-Poste · ' + CONTACT_TEL + ' · ' + CONTACT_MAIL + '<br>Réservation ' + esc(ref(b)) + ' · <a href="' + CGV_URL + '" target="_blank" rel="noopener" style="color:#147566">Conditions générales de vente</a><br>Vous recevrez nos offres d’excursions par e-mail et SMS. Vous pouvez vous y opposer à tout moment : <a href="#" onclick="return false" style="color:#147566">se désabonner</a>.</div>';
     var recap = '<div class="box">' +
       '<div class="r"><span>Excursion</span><span>' + esc(e.name) + '</span></div>' +
       '<div class="r"><span>Départ</span><span>' + esc(fmtDate(d.date, { weekday:'long', day:'numeric', month:'long', year:'numeric' })) + '</span></div>' +
@@ -965,9 +969,48 @@ tr.click{ cursor:pointer; } tr.click:hover td{ background:var(--surface-2); }
   var RUNGIS = '25 avenue Robert Schuman, 94150 Rungis';
   var SEED = {
     amsterdam: { name:'Amsterdam', price:59, capacity:55, returnTime:'05:00', pickups:[{ id:'p0', name:'Dépôt LGD Paris, Rungis', address:RUNGIS, time:'01:00' }, { id:'p1', name:'Paris, Porte Maillot', address:'', time:'01:45' }], idRequired:true, practical:'Un coussin et une petite couverture pour le trajet de nuit\nDe bonnes chaussures pour marcher en ville\nVos billets de musée réservés à l’avance (Rijksmuseum, Van Gogh, Anne Frank)', km:1045, conso:25, fuelPrice:2.30, tolls:160, driverCost:250, drivers:1, parking:50, hotel:80, other:0, adsBudget:200 },
-    bruges: { name:'Bruges', price:45, capacity:55, returnTime:'01:00', pickups:[{ id:'p0', name:'Dépôt LGD Paris, Rungis', address:RUNGIS, time:'05:00' }], idRequired:true, practical:'De bonnes chaussures pour marcher dans la vieille ville\nUn peu de monnaie pour les gaufres et les chocolats', km:650, conso:25, fuelPrice:2.30, tolls:80, driverCost:200, drivers:1, parking:44, hotel:80, other:0, adsBudget:200 },
-    strasbourg: { name:'Marché de Noël de Strasbourg', price:59, capacity:55, returnTime:'04:00', pickups:[{ id:'p0', name:'Dépôt LGD Paris, Rungis', address:RUNGIS, time:'04:00' }], idRequired:false, practical:'Des vêtements chauds : le marché de Noël se visite en extérieur\nUn sac pour vos achats', km:1000, conso:25, fuelPrice:2.30, tolls:208, driverCost:250, drivers:1, parking:43, hotel:80, other:0, adsBudget:200 }
+    bruges: { name:'Bruges', price:45, capacity:55, returnTime:'01:00', pickups:[{ id:'p0', name:'Dépôt LGD Paris, Rungis', address:RUNGIS, time:'05:00' }], idRequired:true, practical:'Des vêtements chauds : les marchés de Noël se visitent en extérieur\nDe bonnes chaussures pour marcher dans la vieille ville\nUn peu de monnaie pour les gaufres et le chocolat chaud', km:650, conso:25, fuelPrice:2.30, tolls:80, driverCost:200, drivers:1, parking:44, hotel:80, other:0, adsBudget:200 },
+    strasbourg: { name:'Marché de Noël de Strasbourg', price:69, capacity:55, returnTime:'04:00', pickups:[{ id:'p0', name:'Dépôt LGD Paris, Rungis', address:RUNGIS, time:'04:00' }], idRequired:false, practical:'Des vêtements chauds : le marché de Noël se visite en extérieur\nLe petit-déjeuner est offert pendant la pause de 06h00\nUn sac pour vos achats', km:1000, conso:25, fuelPrice:2.30, tolls:208, driverCost:250, drivers:1, parking:43, hotel:100, other:0, adsBudget:200 }
   };
+  // Programme publié (fiches du Drive « LGD Excursion »)
+  var PLAN = [ { ex:'bruges', date:'2026-12-05' }, { ex:'strasbourg', date:'2026-12-12' }, { ex:'amsterdam', date:'2026-12-19' } ];
+  function planExc(key){ return exc(key) || S.excursions.filter(function(e){ return !e.demo && new RegExp(key, 'i').test(e.name || ''); })[0] || null; }
+  function planTodo(){
+    var t = [];
+    PLAN.forEach(function(pl){
+      var e = planExc(pl.ex);
+      if(!e){ t.push({ type:'exc', pl:pl }); t.push({ type:'dep', pl:pl }); return; }
+      var deps = S.departures.filter(function(d){ return d.excursionId === e.id && !d.demo && d.status !== 'annule'; });
+      if(deps.some(function(d){ return d.date === pl.date; })) return;
+      var old = deps.filter(function(d){ var n = daysUntil(d.date); return d.date !== pl.date && n != null && n >= 0 && !bookingsOf(d.id).length; })[0];
+      t.push(old ? { type:'move', pl:pl, dep:old } : { type:'dep', pl:pl });
+    });
+    return t;
+  }
+  function planBanner(){
+    var t = planTodo(); if(!t.length) return '';
+    var lbl = { bruges:'Bruges le samedi 5 décembre', strasbourg:'Strasbourg le samedi 12 décembre', amsterdam:'Amsterdam le samedi 19 décembre' };
+    var items = t.map(function(x){ return x.type === 'exc' ? 'Créer l’excursion ' + esc(SEED[x.pl.ex].name) : x.type === 'move' ? 'Déplacer le départ Amsterdam du ' + esc(fmtDate(x.dep.date)) + ' au samedi 19 décembre' : 'Mettre en vente ' + lbl[x.pl.ex]; });
+    return '<div class="card pad" style="margin-bottom:16px;border-left:4px solid var(--accent,#F4A340)"><h2 style="margin-bottom:6px">Programme de décembre à mettre en place</h2><ul class="small" style="margin:0 0 12px 18px">' + items.map(function(i){ return '<li>' + i + '</li>'; }).join('') + '</ul><button type="button" class="btn primary" data-act="plan-dec"' + dis() + '>Tout créer en un clic</button></div>';
+  }
+  function applyPlan(){
+    var t = planTodo(); if(!t.length){ toast('Le programme de décembre est déjà en place'); return; }
+    var created = {}, chain = Promise.resolve(), n = 0;
+    t.forEach(function(x){
+      chain = chain.then(function(){
+        if(x.type === 'exc'){ created[x.pl.ex] = Object.assign({ id: x.pl.ex }, SEED[x.pl.ex]); return saveDoc('excursions', x.pl.ex, Object.assign({}, SEED[x.pl.ex], { updatedAt: new Date().toISOString() })); }
+        var e = planExc(x.pl.ex) || created[x.pl.ex];
+        if(x.type === 'move'){
+          var upd = Object.assign({}, x.dep, { date: x.pl.date, decisionDate: addDays(x.pl.date, -10), status:'vente', updatedAt: new Date().toISOString() }); delete upd.id;
+          n++; return saveDoc('departures', x.dep.id, upd);
+        }
+        var pks = excPickups(e).map(function(p){ return { id:p.id, name:p.name, address:p.address || '', time:p.time || '' }; });
+        n++; return saveDoc('departures', null, { excursionId: e.id, date: x.pl.date, status:'vente', capacity:null, pickups: pks, extraKm:0, vehicle:'Autocar 55 places', driversNames:'', minPax:null, decisionDate: addDays(x.pl.date, -10), adsPlanned: num(e.adsBudget), ads:{ meta:0, tiktok:0, google:0, other:0 }, notes:'', demo:false, updatedAt: new Date().toISOString() });
+      });
+    });
+    toast('Création du programme de décembre…');
+    chain.then(function(){ S.view = 'departs'; render(); toast('Programme de décembre en place : ' + plural(n, 'départ') + ' en vente'); }).catch(writeErr);
+  }
   function seedExcursions(){
     var chain = Promise.resolve();
     Object.keys(SEED).forEach(function(id){ chain = chain.then(function(){ return exc(id) ? null : saveDoc('excursions', id, Object.assign({}, SEED[id], { updatedAt: new Date().toISOString() })); }); });
@@ -1225,6 +1268,7 @@ tr.click{ cursor:pointer; } tr.click:hover td{ background:var(--surface-2); }
     else if(act === 'demo-load') loadDemo();
     else if(act === 'demo-clear') clearDemo();
     else if(act === 'seed') seedExcursions();
+    else if(act === 'plan-dec') applyPlan();
     else if(act === 'logout'){ if(window.firebase) firebase.auth().signOut().then(function(){ location.reload(); }); }
     else if(act === 'reset-pwd'){ var em = document.getElementById('f_email'); if(!em || !em.value){ toast('Saisissez d’abord votre e-mail.'); } else firebase.auth().sendPasswordResetEmail(em.value.trim()).then(function(){ toast('E-mail de réinitialisation envoyé'); }).catch(function(){ toast('Impossible d’envoyer l’e-mail. Vérifiez l’adresse.'); }); }
     else if(act === 'seg'){ S.seg = t.getAttribute('data-seg'); render(); }
