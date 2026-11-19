@@ -596,7 +596,7 @@ tr.click{ cursor:pointer; } tr.click:hover td{ background:var(--surface-2); }
         if(!group.length) return;
         var n = group.filter(function(b){ return b.status === 'payee'; }).reduce(function(t,b){ return t + num(b.qty); }, 0);
         h += '<tr class="group"><td colspan="7">' + esc(hhmm(p.time) + ' · ' + p.name) + ' · ' + plural(n, 'passager') + '</td></tr>';
-        h += group.map(function(b){ return '<tr><td><strong>' + esc(b.name) + '</strong>' + (b.email ? '<div class="muted small">' + esc(b.email) + '</div>' : '') + '</td><td>' + (b.phone ? '<a href="tel:' + esc(String(b.phone).replace(/\s+/g,'')) + '">' + esc(b.phone) + '</a>' : '—') + '</td><td class="num">' + num(b.qty) + '</td><td class="num">' + money2(num(b.amount)) + '</td><td>' + bpill(b.status) + '</td><td>' + esc(b.source || '—') + '</td><td><div class="row" style="flex-wrap:nowrap;gap:6px"><button type="button" class="btn small" data-act="bk-msg" data-id="' + esc(b.id) + '">Messages</button><button type="button" class="btn small" data-act="bk-edit" data-id="' + esc(b.id) + '"' + dis() + '>Modifier</button></div></td></tr>'; }).join('');
+        h += group.map(function(b){ return '<tr><td><strong>' + esc(b.name) + '</strong>' + (b.email ? '<div class="muted small">' + esc(b.email) + '</div>' : '') + voyCell(b) + '</td><td>' + (b.phone ? '<a href="tel:' + esc(String(b.phone).replace(/\s+/g,'')) + '">' + esc(b.phone) + '</a>' : '—') + '</td><td class="num">' + num(b.qty) + '</td><td class="num">' + money2(num(b.amount)) + '</td><td>' + bpill(b.status) + '</td><td>' + esc(b.source || '—') + '</td><td><div class="row" style="flex-wrap:nowrap;gap:6px"><button type="button" class="btn small" data-act="bk-msg" data-id="' + esc(b.id) + '">Messages</button><button type="button" class="btn small" data-act="bk-edit" data-id="' + esc(b.id) + '"' + dis() + '>Modifier</button></div></td></tr>'; }).join('');
       });
       h += '</tbody></table></div>';
     }
@@ -725,7 +725,7 @@ tr.click{ cursor:pointer; } tr.click:hover td{ background:var(--surface-2); }
     confirmBox('Effacer les données de ' + c.name + ' ?', 'Nom, e-mail et téléphone seront retirés de ' + plural(c.bookings.length, 'réservation') + '. Les montants restent pour la comptabilité. Cette action est définitive.', 'Effacer ses données').then(function(ok){
       if(!ok) return;
       var chain = Promise.resolve();
-      c.bookings.forEach(function(b){ var data = Object.assign({}, b); delete data.id; data.name = 'Client effacé'; data.email = ''; data.phone = ''; data.notes = ''; data.anonymized = true; data.updatedAt = new Date().toISOString(); chain = chain.then(function(){ return saveDoc('bookings', b.id, data); }); });
+      c.bookings.forEach(function(b){ var data = Object.assign({}, b); delete data.id; data.name = 'Client effacé'; data.email = ''; data.phone = ''; data.notes = ''; data.voyageurs = []; data.anonymized = true; data.updatedAt = new Date().toISOString(); chain = chain.then(function(){ return saveDoc('bookings', b.id, data); }); });
       chain = chain.then(function(){ return crec(c.id) ? delDoc('clients', c.id) : null; });
       chain.then(function(){ toast('Données du client effacées'); }).catch(writeErr);
     });
@@ -1182,6 +1182,20 @@ tr.click{ cursor:pointer; } tr.click:hover td{ background:var(--surface-2); }
     }
   }
 
+  // ---------- Voyageurs d'une réservation (un nom et un prénom par voyageur, décision du 19/11/2026) ----------
+  function voyList(b){ return Array.isArray(b.voyageurs) ? b.voyageurs : []; }
+  function voyLabel(v){ return [String(v.prenom || '').trim(), String(v.nom || '').trim().toUpperCase()].filter(Boolean).join(' '); }
+  function voyCell(b){ var vs = voyList(b); if(!vs.length) return ''; return '<div class="muted small" style="margin-top:4px">' + vs.map(function(v, i){ return (i + 1) + '. ' + esc(voyLabel(v)) + (v.telephone && !v.coordonneesReservant ? ' · ' + esc(v.telephone) : ''); }).join('<br>') + '</div>'; }
+  function voyFields(list, qty){
+    var h = '';
+    for(var i = 0; i < qty; i++){
+      var v = list[i] || {}, own = v.coordonneesReservant === false;
+      h += '<p class="muted small" style="margin:10px 0 0;font-weight:700">Voyageur ' + (i + 1) + (i === 0 ? ' (la personne qui réserve, si elle voyage)' : '') + '</p>' +
+        '<div class="fields">' + fld('Nom', 'v_nom_' + i, v.nom, 'text', ' autocomplete="off"') + fld('Prénom', 'v_prenom_' + i, v.prenom, 'text', ' autocomplete="off"') + '</div>' +
+        '<div class="fields">' + fld('Téléphone', 'v_tel_' + i, own ? v.telephone : '', 'tel', ' autocomplete="off"', 'Vide = celui de la réservation.') + fld('E-mail', 'v_email_' + i, own ? v.email : '', 'email', ' autocomplete="off"', 'Vide = celui de la réservation.') + '</div>';
+    }
+    return h;
+  }
   function bkForm(b, depId){
     var isNew = !b;
     var deps = S.departures.slice().sort(function(a,c){ return (a.date||'').localeCompare(c.date||''); });
@@ -1194,6 +1208,7 @@ tr.click{ cursor:pointer; } tr.click:hover td{ background:var(--surface-2); }
       '<div id="pk-sel">' + sel('Point de prise en charge', 'pickupId', pkOptions(b.departureId), b.pickupId) + '</div>' +
       '<div class="fields">' + fld('Nom et prénom', 'name', b.name, 'text', ' required autocomplete="off"') + fld('Téléphone', 'phone', b.phone, 'tel', ' autocomplete="off"', 'Pour le SMS de rappel.') + fld('E-mail', 'email', b.email, 'email', ' autocomplete="off"', 'Pour la confirmation et le rappel.') + '</div>' +
       '<div class="fields">' + fld('Nombre de places', 'qty', b.qty, 'number', ' min="1" max="55" required') + fld('Montant payé TTC (€)', 'amount', b.amount, 'number', ' step="0.01" min="0"', 'Calculé automatiquement, modifiable.') + '</div>' +
+      '<div id="voy-box">' + voyFields(voyList(b), Math.max(1, Math.round(num(b.qty, 1)))) + '</div>' +
       '<div class="fields">' + sel('Statut', 'status', Object.keys(BSTATUS).map(function(k){ return [k, BSTATUS[k]]; }), b.status) + sel('Source', 'source', SOURCES.map(function(x){ return [x, x]; }), b.source) + '</div>' +
       '<div class="fields">' + fld('Code promo', 'promoCode', b.promoCode, 'text', ' placeholder="Ex. RETOUR10"', 'Si le client a utilisé le code d’une campagne.') + '</div>' +
       '<label class="check"><input type="checkbox" name="optOut"' + (b.optOut ? ' checked' : '') + '> Le client refuse de recevoir nos offres (e-mail et SMS)</label>' +
@@ -1202,10 +1217,17 @@ tr.click{ cursor:pointer; } tr.click:hover td{ background:var(--surface-2); }
       if(action === 'delete'){ busy(form,true); delDoc('bookings', b.id).then(function(){ dlg.close(); toast('Réservation supprimée'); }).catch(function(err){ busy(form,false); writeErr(err); }); return; }
       if(!fv(form,'name')){ toast('Indiquez le nom du voyageur.'); return; }
       var qty = Math.max(1, Math.round(num(fv(form,'qty'),1)));
+      var voyageurs = [];
+      for(var vi = 0; vi < qty; vi++){
+        var vn = fv(form, 'v_nom_' + vi), vp = fv(form, 'v_prenom_' + vi), vt = fv(form, 'v_tel_' + vi), ve = fv(form, 'v_email_' + vi);
+        if(!vn || !vp){ toast('Indiquez le nom et le prénom du voyageur ' + (vi + 1) + '.'); return; }
+        var same = !vt && !ve;
+        voyageurs.push({ nom: vn, prenom: vp, telephone: vt || fv(form,'phone'), email: (ve || fv(form,'email')).toLowerCase(), coordonneesReservant: same });
+      }
       var d = dep(fv(form,'departureId')); var s = d ? stats(d) : null;
       var already = (!isNew && b.departureId === fv(form,'departureId') && b.status === 'payee') ? num(b.qty) : 0;
       if(s && fv(form,'status') === 'payee' && s.pax - already + qty > s.cap){ toast('Pas assez de places : il en reste ' + Math.max(0, s.cap - s.pax + already) + '.'); return; }
-      var data = { departureId: fv(form,'departureId'), pickupId: fv(form,'pickupId'), name: fv(form,'name'), phone: fv(form,'phone'), email: fv(form,'email'), qty: qty, amount: num(fv(form,'amount')), status: fv(form,'status'), source: fv(form,'source'), notes: fv(form,'notes'),
+      var data = { departureId: fv(form,'departureId'), pickupId: fv(form,'pickupId'), name: fv(form,'name'), phone: fv(form,'phone'), email: fv(form,'email'), qty: qty, voyageurs: voyageurs, amount: num(fv(form,'amount')), status: fv(form,'status'), source: fv(form,'source'), notes: fv(form,'notes'),
         promoCode: fv(form,'promoCode').toUpperCase(), optOut: !!form.elements.optOut.checked, anonymized: !!b.anonymized,
         createdAt: b.createdAt || new Date().toISOString(), updatedAt: new Date().toISOString(), demo: !!b.demo };
       busy(form,true);
@@ -1213,6 +1235,12 @@ tr.click{ cursor:pointer; } tr.click:hover td{ background:var(--surface-2); }
     });
     var recalc = function(){ form.elements.amount.value = (priceOf(form.elements.departureId.value) * Math.max(1, Math.round(num(form.elements.qty.value,1)))).toFixed(2); };
     form.elements.qty.addEventListener('input', recalc);
+    var vmem = voyList(b).slice();
+    form.elements.qty.addEventListener('input', function(){
+      var n = Math.min(55, Math.max(1, Math.round(num(form.elements.qty.value, 1))));
+      for(var i = 0; form.elements['v_nom_' + i]; i++){ var t = fv(form, 'v_tel_' + i), m = fv(form, 'v_email_' + i); vmem[i] = { nom: fv(form, 'v_nom_' + i), prenom: fv(form, 'v_prenom_' + i), telephone: t, email: m, coordonneesReservant: !t && !m }; }
+      document.getElementById('voy-box').innerHTML = voyFields(vmem, n);
+    });
     form.elements.departureId.addEventListener('change', function(){ recalc(); document.getElementById('pk-sel').innerHTML = sel('Point de prise en charge', 'pickupId', pkOptions(this.value), ''); });
   }
 
@@ -1220,10 +1248,12 @@ tr.click{ cursor:pointer; } tr.click:hover td{ background:var(--surface-2); }
   function exportManifest(d){
     if(!downloads) return;
     var e = exc(d.excursionId) || {};
-    var rows = [['Prise en charge','Heure','Nom','Téléphone','E-mail','Places','Statut','Montant TTC','Source','Notes']];
+    var rows = [['Prise en charge','Heure','Nom','Téléphone','E-mail','Places','Statut','Montant TTC','Source','Notes','Réservé par']];
     pickupsOf(d).forEach(function(p){
       bookingsOf(d.id).filter(function(b){ return (b.status === 'payee' || b.status === 'attente') && pickupOf(b).id === p.id; }).sort(function(a,c){ return (a.name||'').localeCompare(c.name||''); }).forEach(function(b){
-        rows.push([p.name, hhmm(p.time), b.name, b.phone, b.email, num(b.qty), BSTATUS[b.status] || b.status, num(b.amount).toFixed(2).replace('.', ','), b.source, b.notes]);
+        var vs = voyList(b);
+        if(!vs.length) rows.push([p.name, hhmm(p.time), b.name, b.phone, b.email, num(b.qty), BSTATUS[b.status] || b.status, num(b.amount).toFixed(2).replace('.', ','), b.source, b.notes, b.name]);
+        else vs.forEach(function(v, i){ rows.push([p.name, hhmm(p.time), voyLabel(v), v.telephone, v.email, 1, BSTATUS[b.status] || b.status, i === 0 ? num(b.amount).toFixed(2).replace('.', ',') : '', b.source, i === 0 ? b.notes : '', b.name]); });
       });
     });
     var csv = '\ufeff' + rows.map(function(r){ return r.map(function(c){ var s = String(c == null ? '' : c); return /[";\n]/.test(s) ? '"' + s.replace(/"/g,'""') + '"' : s; }).join(';'); }).join('\r\n');
