@@ -182,6 +182,10 @@ fieldset{ border:1px solid var(--line); border-radius:12px; padding:12px 14px 14
 legend{ font-weight:600; padding:0 6px; font-size:14px; }
 .pkrow{ display:grid; grid-template-columns: minmax(0,1.1fr) minmax(0,1.6fr) 110px; gap:8px; margin-top:8px; }
 .pkrow input{ min-height:40px; padding:6px 10px; border:1px solid var(--line); border-radius:8px; background:var(--surface); width:100%; }
+.rtrow, .rthead{ display:grid; grid-template-columns: minmax(0,1.1fr) minmax(0,1.6fr) 110px 80px; gap:8px; margin-top:8px; }
+.rtrow input{ min-height:40px; padding:6px 10px; border:1px solid var(--line); border-radius:8px; background:var(--surface); width:100%; }
+.rthead{ margin-top:4px; font-size:12px; font-weight:600; color:var(--muted); }
+@media (max-width: 560px){ .rtrow, .rthead{ grid-template-columns: 1fr 1fr; } .rtrow input:nth-child(2){ grid-column:1 / -1; grid-row:2; } .rthead span:nth-child(2){ display:none; } }
 .pkhead{ display:grid; grid-template-columns: minmax(0,1.1fr) minmax(0,1.6fr) 110px; gap:8px; font-size:12px; font-weight:600; color:var(--muted); }
 @media (max-width: 560px){ .pkrow, .pkhead{ grid-template-columns: 1fr 1fr; } .pkrow input:nth-child(2){ grid-column:1 / -1; grid-row:2; } .pkhead span:nth-child(2){ display:none; } }
 .iconbtn{ width:44px; height:44px; border:0; background:transparent; border-radius:9px; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; }
@@ -551,7 +555,8 @@ tr.click{ cursor:pointer; } tr.click:hover td{ background:var(--surface-2); }
     var bs = bookingsOf(d.id);
     var h = '<button type="button" class="backbtn" data-nav="departs"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>Tous les départs</button>';
     h += '<div class="head"><div><h1>' + esc(s.e.name || 'Excursion supprimée') + (d.demo ? ' <span class="tag">DÉMO</span>' : '') + '</h1><p class="muted">' + esc(fmtDate(d.date)) + (s.e.returnTime ? ' · retour prévu vers ' + esc(hhmm(s.e.returnTime)) : '') + '</p></div>' +
-      '<div class="row">' + pill(s.st) + '<button type="button" class="btn" data-act="dep-edit" data-id="' + esc(d.id) + '"' + dis() + '>Modifier le départ</button></div></div>';
+      '<div class="row">' + pill(s.st) + '<button type="button" class="btn" data-act="drv-link" data-id="' + esc(d.id) + '"' + dis() + '>Copier le lien chauffeur</button><button type="button" class="btn" data-act="dep-edit" data-id="' + esc(d.id) + '"' + dis() + '>Modifier le départ</button></div></div>' +
+      (d.mission && d.mission.statut === 'terminee' ? '<div class="note ok">Rapport du chauffeur validé' + (d.mission.rapportAt ? ' le ' + esc(new Date(d.mission.rapportAt).toLocaleString('fr-FR', { day:'numeric', month:'long', hour:'2-digit', minute:'2-digit' })) : '') + ' : la liste des passagers n’est plus visible sur son lien.</div>' : '');
 
     var msg;
     if(s.st.label === 'Annulé') msg = '<div class="note warn">Départ annulé. Remboursez les voyageurs encore marqués « Payée » : chacun recevra l’e-mail « Départ annulé ».</div>';
@@ -1095,6 +1100,54 @@ tr.click{ cursor:pointer; } tr.click:hover td{ background:var(--surface-2); }
     }
     return h + '</fieldset>';
   }
+  // ---------- Feuille de route chauffeur (décision du 19/11/2026) ----------
+  var MAX_PAUSES = 3;
+  function rtRows(prefix, list, cols){
+    var h = '<div class="rthead" aria-hidden="true"><span>' + cols[0] + '</span><span>Adresse ou GPS</span><span>' + (cols[1] === '—' ? '' : cols[1]) + '</span><span>' + (cols[2] === '—' ? '' : cols[2]) + '</span></div>';
+    for(var i = 0; i < list.length; i++){
+      var r = list[i] || {};
+      h += '<div class="rtrow"><input name="' + prefix + '_lieu_' + i + '" aria-label="' + cols[0] + ' ' + (i+1) + '" value="' + esc(r.lieu || '') + '">' +
+        '<input name="' + prefix + '_adr_' + i + '" aria-label="Adresse ' + (i+1) + '" placeholder="Adresse ou 48.5750,7.7535" value="' + esc(r.adresse || '') + '">' +
+        '<input name="' + prefix + '_h_' + i + '" type="time" aria-label="' + cols[1] + ' ' + (i+1) + '" value="' + esc(r.heure || '') + '"' + (cols[1] === '—' ? ' style="visibility:hidden" tabindex="-1"' : '') + '>' +
+        '<input name="' + prefix + '_x_' + i + '" aria-label="' + cols[2] + ' ' + (i+1) + '" value="' + esc(r.extra || '') + '"' + (cols[2] === '—' ? ' style="visibility:hidden" tabindex="-1"' : '') + '></div>';
+    }
+    return h;
+  }
+  function pad(list, n){ var out = (list || []).slice(0, n); while(out.length < n) out.push({}); return out; }
+  function routeEditor(rt){
+    rt = rt || {};
+    return '<fieldset><legend>Feuille de route chauffeur</legend><p class="muted small" style="margin:0 0 6px">Repris dans la feuille de route du chauffeur. Laissez une ligne vide pour ne pas l’utiliser.</p>' +
+      '<div class="fields">' + fld('Ville (pour les annonces au micro)', 'rt_ville', rt.ville, 'text', ' placeholder="Ex. Strasbourg"') + '</div>' +
+      '<p class="muted small" style="margin:12px 0 0;font-weight:700">Pauses à l’aller</p>' + rtRows('pa', pad(rt.pausesAller, MAX_PAUSES).map(function(p){ return { lieu:p.lieu, adresse:p.adresse, heure:p.heure, extra:p.duree }; }), ['Aire', 'Heure', 'Durée (min)']) +
+      '<p class="muted small" style="margin:12px 0 0;font-weight:700">Arrivée : dépose et reprise des clients</p>' + rtRows('dp', [{ lieu:(rt.depose||{}).lieu, adresse:(rt.depose||{}).adresse, heure:(rt.depose||{}).heure, extra:'' }], ['Lieu', 'Heure d’arrivée', '—']) +
+      '<p class="muted small" style="margin:12px 0 0;font-weight:700">Parking de l’autocar</p>' + rtRows('pk2', [{ lieu:(rt.parking||{}).lieu, adresse:(rt.parking||{}).adresse, heure:'', extra:(rt.parking||{}).prix }], ['Parking', '—', 'Prix']) +
+      '<div class="fields" style="margin-top:12px">' + fld('Rendez-vous des clients au retour', 'rt_rdv', rt.rdvRetour, 'time') + fld('Départ du retour', 'rt_depr', rt.departRetour, 'time') + '</div>' +
+      '<p class="muted small" style="margin:12px 0 0;font-weight:700">Pauses au retour</p>' + rtRows('pr', pad(rt.pausesRetour, MAX_PAUSES).map(function(p){ return { lieu:p.lieu, adresse:p.adresse, heure:p.heure, extra:p.duree }; }), ['Aire', 'Heure', 'Durée (min)']) +
+      '</fieldset>';
+  }
+  function readRoute(form){
+    function rows(prefix, n){ var out = []; for(var i = 0; i < n; i++){ var l = fv(form, prefix + '_lieu_' + i); if(!l) continue; out.push({ lieu: l, adresse: fv(form, prefix + '_adr_' + i), heure: fv(form, prefix + '_h_' + i), duree: fv(form, prefix + '_x_' + i) }); } return out; }
+    return {
+      ville: fv(form, 'rt_ville'),
+      pausesAller: rows('pa', MAX_PAUSES),
+      depose: { lieu: fv(form, 'dp_lieu_0'), adresse: fv(form, 'dp_adr_0'), heure: fv(form, 'dp_h_0') },
+      parking: { lieu: fv(form, 'pk2_lieu_0'), adresse: fv(form, 'pk2_adr_0'), prix: fv(form, 'pk2_x_0') },
+      rdvRetour: fv(form, 'rt_rdv'), departRetour: fv(form, 'rt_depr'),
+      pausesRetour: rows('pr', MAX_PAUSES)
+    };
+  }
+  function driverLink(d){ return 'https://excursions.lgdparis.com/chauffeur/?d=' + encodeURIComponent(d.id) + '&t=' + encodeURIComponent((d.chauffeur || {}).token || ''); }
+  function newToken(){ var a = new Uint8Array(18); (window.crypto || window.msCrypto).getRandomValues(a); return Array.prototype.map.call(a, function(x){ return ('0' + x.toString(16)).slice(-2); }).join(''); }
+  function copyDriverLink(d){
+    var go = function(dd){
+      var link = driverLink(dd);
+      var show = function(){ openDialog('Lien chauffeur', '<p>Copiez ce lien et collez-le dans le groupe WhatsApp du chauffeur :</p><div class="field"><input id="f_link" readonly value="' + esc(link) + '"></div>', '<button type="button" class="btn primary" data-close>Fermer</button>', function(){}); var i = document.getElementById('f_link'); if(i){ i.focus(); i.select(); } };
+      if(navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(link).then(function(){ toast('Lien chauffeur copié : collez-le dans le groupe WhatsApp'); }).catch(show); else show();
+    };
+    if((d.chauffeur || {}).token) return go(d);
+    var data = Object.assign({}, d); delete data.id; data.chauffeur = Object.assign({}, d.chauffeur || {}, { token: newToken() }); data.updatedAt = new Date().toISOString();
+    saveDoc('departures', d.id, data).then(function(){ go(Object.assign({ id: d.id }, data)); }).catch(writeErr);
+  }
   function readPickups(form){
     var out = [];
     for(var i=0;i<MAX_PK;i++){
@@ -1116,7 +1169,8 @@ tr.click{ cursor:pointer; } tr.click:hover td{ background:var(--surface-2); }
         fld('Distance aller-retour (km)', 'km', e.km, 'number', ' min="0"') + fld('Consommation (L/100 km)', 'conso', e.conso, 'number', ' step="0.1" min="0"') + fld('Prix du gazole (€/L)', 'fuelPrice', e.fuelPrice, 'number', ' step="0.01" min="0"') +
         fld('Péages aller-retour (€)', 'tolls', e.tolls, 'number', ' step="0.01" min="0"') + fld('Coût par conducteur (€)', 'driverCost', e.driverCost, 'number', ' step="0.01" min="0"') + fld('Nombre de conducteurs', 'drivers', e.drivers, 'number', ' min="1" max="4"') +
         fld('Parking (€)', 'parking', e.parking, 'number', ' step="0.01" min="0"') + fld('Hôtel conducteur (€)', 'hotel', e.hotel, 'number', ' step="0.01" min="0"') + fld('Autres frais (€)', 'other', e.other, 'number', ' step="0.01" min="0"') +
-        fld('Budget pub par départ (€)', 'adsBudget', e.adsBudget, 'number', ' step="1" min="0"', 'Repris par défaut dans chaque nouveau départ.') + '</div></fieldset>';
+        fld('Budget pub par départ (€)', 'adsBudget', e.adsBudget, 'number', ' step="1" min="0"', 'Repris par défaut dans chaque nouveau départ.') + '</div></fieldset>' +
+      routeEditor(e.route);
     var hasDeps = !isNew && S.departures.some(function(d){ return d.excursionId === e.id; });
     openDialog(isNew ? 'Nouvelle excursion' : 'Modifier l’excursion', body, footer(!isNew), function(form, action){
       if(action === 'delete'){
@@ -1129,7 +1183,7 @@ tr.click{ cursor:pointer; } tr.click:hover td{ background:var(--surface-2); }
       var data = { name: fv(form,'name'), price: num(fv(form,'price')), capacity: Math.round(num(fv(form,'capacity'),55)), returnTime: fv(form,'returnTime'), pickups: pks,
         idRequired: fv(form,'idRequired') === 'oui', practical: fv(form,'practical'),
         km: num(fv(form,'km')), conso: num(fv(form,'conso')), fuelPrice: num(fv(form,'fuelPrice')), tolls: num(fv(form,'tolls')), driverCost: num(fv(form,'driverCost')), drivers: Math.max(1, Math.round(num(fv(form,'drivers'),1))),
-        parking: num(fv(form,'parking')), hotel: num(fv(form,'hotel')), other: num(fv(form,'other')), adsBudget: num(fv(form,'adsBudget')), demo: !!e.demo, updatedAt: new Date().toISOString() };
+        parking: num(fv(form,'parking')), hotel: num(fv(form,'hotel')), other: num(fv(form,'other')), adsBudget: num(fv(form,'adsBudget')), route: readRoute(form), demo: !!e.demo, updatedAt: new Date().toISOString() };
       busy(form, true);
       saveDoc('excursions', isNew ? null : e.id, data).then(function(){ dlg.close(); toast(isNew ? 'Excursion créée' : 'Excursion enregistrée'); }).catch(function(err){ busy(form,false); writeErr(err); });
     });
@@ -1144,6 +1198,7 @@ tr.click{ cursor:pointer; } tr.click:hover td{ background:var(--surface-2); }
       '<div id="pk-wrap">' + pickupsEditor(pickupsOf(d)) + '</div>' +
       '<div class="fields">' + fld('Km ajoutés pour les prises en charge', 'extraKm', d.extraKm, 'number', ' min="0"', 'Détour par rapport au trajet de base, ajouté au carburant.') + '</div>' +
       '<fieldset><legend>Organisation</legend><div class="fields">' + fld('Véhicule', 'vehicle', d.vehicle, 'text', ' placeholder="Ex. autocar 55 places, immatriculation"') + fld('Conducteur(s)', 'driversNames', d.driversNames) + '</div></fieldset>' +
+      '<fieldset><legend>Chauffeur (feuille de route)</legend><div class="fields">' + fld('Téléphone du chauffeur', 'drvPhone', (d.chauffeur || {}).telephone, 'tel', ' autocomplete="off"') + fld('Hôtel du chauffeur (adresse)', 'drvHotel', (d.chauffeur || {}).hotel, 'text', ' autocomplete="off"') + fld('Hôtel : horaires', 'drvHotelH', (d.chauffeur || {}).hotelHoraires, 'text', ' placeholder="Ex. 11h20 → 20h20"') + '</div></fieldset>' +
       '<fieldset><legend>Décision de maintien</legend><div class="fields">' + fld('Minimum de passagers', 'minPax', d.minPax, 'number', ' min="0"', 'Vide = seuil de rentabilité.') + fld('Date limite de décision', 'decisionDate', d.decisionDate, 'date') + '</div></fieldset>' +
       '<fieldset><legend>Publicité</legend><div class="fields">' + fld('Budget prévu (€)', 'adsPlanned', d.adsPlanned, 'number', ' min="0"', 'Utilisé tant qu’aucune dépense n’est saisie.') + fld('Dépensé Meta (€)', 'ads_meta', ads.meta, 'number', ' step="0.01" min="0"') + fld('Dépensé TikTok (€)', 'ads_tiktok', ads.tiktok, 'number', ' step="0.01" min="0"') + fld('Dépensé Google (€)', 'ads_google', ads.google, 'number', ' step="0.01" min="0"') + fld('Autre pub (€)', 'ads_other', ads.other, 'number', ' step="0.01" min="0"') + '</div></fieldset>' +
       '<div class="field"><label for="f_notes">Notes</label><textarea id="f_notes" name="notes">' + esc(d.notes || '') + '</textarea></div>';
@@ -1162,7 +1217,9 @@ tr.click{ cursor:pointer; } tr.click:hover td{ background:var(--surface-2); }
       var data = { excursionId: fv(form,'excursionId'), date: fv(form,'date'), status: fv(form,'status'), capacity: fv(form,'capacity') ? Math.round(num(fv(form,'capacity'))) : null, pickups: pks, extraKm: num(fv(form,'extraKm')),
         vehicle: fv(form,'vehicle'), driversNames: fv(form,'driversNames'), minPax: fv(form,'minPax') ? Math.round(num(fv(form,'minPax'))) : null, decisionDate: fv(form,'decisionDate'),
         adsPlanned: num(fv(form,'adsPlanned')), ads: { meta: num(fv(form,'ads_meta')), tiktok: num(fv(form,'ads_tiktok')), google: num(fv(form,'ads_google')), other: num(fv(form,'ads_other')) },
-        notes: fv(form,'notes'), demo: !!d.demo, launch: !!d.launch, updatedAt: new Date().toISOString() };
+        notes: fv(form,'notes'), demo: !!d.demo, launch: !!d.launch, updatedAt: new Date().toISOString(),
+        chauffeur: Object.assign({}, d.chauffeur || {}, { telephone: fv(form,'drvPhone'), hotel: fv(form,'drvHotel'), hotelHoraires: fv(form,'drvHotelH') }) };
+      if(d.mission) data.mission = d.mission;
       busy(form,true);
       saveDoc('departures', isNew ? null : d.id, data).then(function(id){
         dlg.close();
@@ -1329,6 +1386,7 @@ tr.click{ cursor:pointer; } tr.click:hover td{ background:var(--surface-2); }
     if(act === 'dep-open'){ S.view = 'depart'; S.depId = id; render(); window.scrollTo(0,0); }
     else if(act === 'dep-new') depForm();
     else if(act === 'dep-edit') depForm(dep(id));
+    else if(act === 'drv-link') copyDriverLink(dep(id));
     else if(act === 'exc-new') excForm();
     else if(act === 'exc-edit') excForm(exc(id));
     else if(act === 'bk-new') bkForm(null, t.getAttribute('data-dep'));
