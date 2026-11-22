@@ -1161,7 +1161,8 @@ tr.click{ cursor:pointer; } tr.click:hover td{ background:var(--surface-2); }
   function excForm(e){
     var isNew = !e;
     e = e || { capacity:55, conso:25, fuelPrice:2.30, drivers:1, adsBudget:200, idRequired:false };
-    var body = '<div class="fields">' + fld('Nom de l’excursion', 'name', e.name, 'text', ' required') + fld('Prix TTC par personne (€)', 'price', e.price, 'number', ' step="0.01" min="0" required', 'TVA de 10 % incluse.') + fld('Places dans le car', 'capacity', e.capacity, 'number', ' min="1" max="120"') + fld('Heure de retour prévue', 'returnTime', e.returnTime, 'time') + '</div>' +
+    var body = '<div class="fields">' + fld('Nom de l’excursion', 'name', e.name, 'text', ' required') + fld('Prix TTC par personne (€)', 'price', e.price, 'number', ' step="0.01" min="0" required', 'Plein tarif. TVA de 10 % incluse.') + fld('Places dans le car', 'capacity', e.capacity, 'number', ' min="1" max="120"') + fld('Heure de retour prévue', 'returnTime', e.returnTime, 'time') + '</div>' +
+      '<div class="fields">' + fld('Prix early bird TTC (€)', 'earlyPrice', e.earlyPrice, 'number', ' step="0.01" min="0"', 'Vide = pas d’early bird.') + fld('Places au prix early bird', 'earlySeats', e.earlySeats, 'number', ' min="0" max="120"', 'Les premières places de chaque départ. Ensuite : plein tarif, automatiquement.') + fld('Early bird jusqu’au (facultatif)', 'earlyUntil', e.earlyUntil, 'date', '', 'Vide = jusqu’à ce que les places early bird soient vendues.') + '</div>' +
       pickupsEditor(excPickups(isNew ? null : e)) +
       '<fieldset><legend>Infos pour les voyageurs</legend><div class="fields">' + sel('Pièce d’identité obligatoire', 'idRequired', [['oui','Oui (voyage à l’étranger)'],['non','Non']], e.idRequired ? 'oui' : 'non') + '</div>' +
       '<div class="field" style="margin-top:12px"><label for="f_practical">À prévoir (une ligne par conseil)</label><textarea id="f_practical" name="practical" placeholder="Ex. Un coussin et une petite couverture pour le trajet de nuit">' + esc(e.practical || '') + '</textarea><span class="hint">Repris dans l’e-mail de confirmation et le rappel.</span></div></fieldset>' +
@@ -1180,7 +1181,7 @@ tr.click{ cursor:pointer; } tr.click:hover td{ background:var(--surface-2); }
       if(!fv(form,'name') || !(num(fv(form,'price')) > 0)){ toast('Indiquez au moins un nom et un prix.'); return; }
       var pks = readPickups(form);
       if(!pks.length){ toast('Ajoutez au moins un point de prise en charge.'); return; }
-      var data = { name: fv(form,'name'), price: num(fv(form,'price')), capacity: Math.round(num(fv(form,'capacity'),55)), returnTime: fv(form,'returnTime'), pickups: pks,
+      var data = { name: fv(form,'name'), price: num(fv(form,'price')), earlyPrice: num(fv(form,'earlyPrice')), earlySeats: Math.round(num(fv(form,'earlySeats'))), earlyUntil: fv(form,'earlyUntil'), capacity: Math.round(num(fv(form,'capacity'),55)), returnTime: fv(form,'returnTime'), pickups: pks,
         idRequired: fv(form,'idRequired') === 'oui', practical: fv(form,'practical'),
         km: num(fv(form,'km')), conso: num(fv(form,'conso')), fuelPrice: num(fv(form,'fuelPrice')), tolls: num(fv(form,'tolls')), driverCost: num(fv(form,'driverCost')), drivers: Math.max(1, Math.round(num(fv(form,'drivers'),1))),
         parking: num(fv(form,'parking')), hotel: num(fv(form,'hotel')), other: num(fv(form,'other')), adsBudget: num(fv(form,'adsBudget')), route: readRoute(form), demo: !!e.demo, updatedAt: new Date().toISOString() };
