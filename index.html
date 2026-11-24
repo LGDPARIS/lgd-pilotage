@@ -971,8 +971,9 @@ tr.click{ cursor:pointer; } tr.click:hover td{ background:var(--surface-2); }
     return h + '<p class="muted small" style="margin-top:12px">' + plural(opax, 'passager') + ' venu' + (opax > 1 ? 's' : '') + ' sans pub (site direct, téléphone, autre). Les dépenses se saisissent dans chaque départ (« Modifier le départ »).</p>';
   }
 
-  var RUNGIS = '1 rue des Vosges, 94150 Rungis', RUNGIS_NAME = 'Gare de Rungis', OLD_RUNGIS = '25 avenue Robert Schuman, 94150 Rungis';
-  var PARKING = 'Parking gratuit à la gare de Rungis : stationnement facile, de nombreuses places à proximité';
+  // Point de départ unique (décision Trésor du 25/11/2026) : remplace la Gare de Rungis, 1 rue des Vosges
+  var RUNGIS = '25 avenue Robert Schuman, 94150 Rungis', RUNGIS_NAME = 'LGD Paris – Rungis', OLD_RUNGIS = '1 rue des Vosges, 94150 Rungis';
+  var PARKING = 'Accueil au 1er étage à droite, 25 avenue Robert Schuman, 94150 Rungis · parking gratuit sur place';
   var SEED = {
     amsterdam: { name:'Amsterdam', price:59, capacity:55, returnTime:'05:00', pickups:[{ id:'p0', name:RUNGIS_NAME, address:RUNGIS, time:'01:00' }, { id:'p1', name:'Paris, Porte Maillot', address:'', time:'01:45' }], idRequired:true, practical:PARKING + '\nUn coussin et une petite couverture pour le trajet de nuit\nDe bonnes chaussures pour marcher en ville\nVos billets de musée réservés à l’avance (Rijksmuseum, Van Gogh, Anne Frank)', km:1045, conso:25, fuelPrice:2.30, tolls:160, driverCost:250, drivers:1, parking:50, hotel:80, other:0, adsBudget:200 },
     bruges: { name:'Bruges', price:45, capacity:55, returnTime:'01:00', pickups:[{ id:'p0', name:RUNGIS_NAME, address:RUNGIS, time:'05:00' }], idRequired:true, practical:PARKING + '\nDes vêtements chauds : les marchés de Noël se visitent en extérieur\nDe bonnes chaussures pour marcher dans la vieille ville\nUn peu de monnaie pour les gaufres et le chocolat chaud', km:650, conso:25, fuelPrice:2.30, tolls:80, driverCost:200, drivers:1, parking:44, hotel:80, other:0, adsBudget:200 },
@@ -981,7 +982,7 @@ tr.click{ cursor:pointer; } tr.click:hover td{ background:var(--surface-2); }
   // Programme publié (fiches du Drive « LGD Excursion »)
   var PLAN = [ { ex:'bruges', date:'2026-12-05' }, { ex:'strasbourg', date:'2026-12-12' }, { ex:'amsterdam', date:'2026-12-19' } ];
   function planExc(key){ return exc(key) || S.excursions.filter(function(e){ return !e.demo && new RegExp(key, 'i').test(e.name || ''); })[0] || null; }
-  function isOldPk(p){ return p && (p.address === OLD_RUNGIS || /d[ée]p[ôo]t lgd/i.test(p.name || '')); }
+  function isOldPk(p){ return p && (p.address === OLD_RUNGIS || /vosges/i.test(p.address || '') || /gare de rungis|d[ée]p[ôo]t lgd/i.test(p.name || '')); }
   function fixPks(list){ return (list || []).map(function(p){ return isOldPk(p) ? Object.assign({}, p, { name:RUNGIS_NAME, address:RUNGIS }) : p; }); }
   // Données de test : tout ce qui existe avant le lancement (le lancement = premier départ créé par « Tout créer en un clic »)
   function launched(){ return S.departures.some(function(d){ return d.launch; }); }
@@ -1016,7 +1017,7 @@ tr.click{ cursor:pointer; } tr.click:hover td{ background:var(--surface-2); }
   function planBanner(){
     var td = testData(), tdIds = td.departures.map(function(d){ return d.id; }), t = planTodo().filter(function(x){ return x.type !== 'depaddr' || tdIds.indexOf(x.dep.id) < 0; }).map(function(x){ return x.type === 'move' && tdIds.indexOf(x.dep.id) >= 0 ? { type:'dep', pl:x.pl } : x; }); if(!t.length && !td.total) return '';
     var lbl = { bruges:'Bruges le samedi 5 décembre', strasbourg:'Strasbourg le samedi 12 décembre', amsterdam:'Amsterdam le samedi 19 décembre' };
-    var items = t.filter(function(x, i){ return x.type !== 'depaddr' || !t.slice(0, i).some(function(y){ return y.type === 'depaddr'; }); }).map(function(x){ return x.type === 'addr' ? 'Point de départ de ' + esc(x.e.name) + ' : Gare de Rungis, 1 rue des Vosges (parking gratuit)' : x.type === 'depaddr' ? 'Mettre la nouvelle adresse sur les départs déjà programmés' : x.type === 'exc' ? 'Créer l’excursion ' + esc(SEED[x.pl.ex].name) : x.type === 'move' ? 'Déplacer le départ Amsterdam du ' + esc(fmtDate(x.dep.date)) + ' au samedi 19 décembre' : 'Mettre en vente ' + lbl[x.pl.ex]; });
+    var items = t.filter(function(x, i){ return x.type !== 'depaddr' || !t.slice(0, i).some(function(y){ return y.type === 'depaddr'; }); }).map(function(x){ return x.type === 'addr' ? 'Point de départ de ' + esc(x.e.name) + ' : LGD Paris – Rungis, 25 avenue Robert Schuman (accueil au 1er étage à droite, parking gratuit)' : x.type === 'depaddr' ? 'Mettre la nouvelle adresse sur les départs déjà programmés' : x.type === 'exc' ? 'Créer l’excursion ' + esc(SEED[x.pl.ex].name) : x.type === 'move' ? 'Déplacer le départ Amsterdam du ' + esc(fmtDate(x.dep.date)) + ' au samedi 19 décembre' : 'Mettre en vente ' + lbl[x.pl.ex]; });
     if(td.total) items.unshift('<strong>Remettre à zéro</strong> : effacer les données de test (' + [plural(td.bookings.length, 'réservation'), plural(td.departures.length, 'départ'), plural(td.clients.length, 'fiche client', 'fiches client'), plural(td.campaigns.length, 'campagne')].join(', ') + ')');
     return '<div class="card pad" style="margin-bottom:16px;border-left:4px solid var(--accent,#F4A340)"><h2 style="margin-bottom:6px">Remise à zéro et programme de décembre</h2><ul class="small" style="margin:0 0 12px 18px">' + items.map(function(i){ return '<li>' + i + '</li>'; }).join('') + '</ul><button type="button" class="btn primary" data-act="plan-dec"' + dis() + '>' + (td.total ? 'Tout remettre à zéro et créer en un clic' : 'Tout créer en un clic') + '</button></div>';
   }
@@ -1039,7 +1040,7 @@ tr.click{ cursor:pointer; } tr.click:hover td{ background:var(--surface-2); }
         if(x.type === 'addr'){
           var ue = Object.assign({}, x.e, { pickups: fixPks(excPickups(x.e)), updatedAt: new Date().toISOString() }); delete ue.id;
           var lines = String(ue.practical || '').split('\n').filter(function(l){ return l.trim(); });
-          lines = lines.filter(function(l){ return !/stationnement facile|parking gratuit/i.test(l); }); lines.unshift(PARKING);
+          lines = lines.filter(function(l){ return !/stationnement facile|parking gratuit|accueil au 1er/i.test(l); }); lines.unshift(PARKING);
           ue.practical = lines.join('\n'); created[x.pl.ex] = Object.assign({ id: x.e.id }, ue);
           return saveDoc('excursions', x.e.id, ue);
         }
@@ -1094,7 +1095,7 @@ tr.click{ cursor:pointer; } tr.click:hover td{ background:var(--surface-2); }
     for(var i=0;i<MAX_PK;i++){
       var p = list[i] || {};
       h += '<div class="pkrow"><input type="hidden" name="pk_id_' + i + '" value="' + esc(p.id || '') + '">' +
-        '<input name="pk_name_' + i + '" aria-label="Nom du point ' + (i+1) + '" placeholder="' + (i === 0 ? 'Ex. Gare de Rungis' : 'Ex. Paris, Porte Maillot') + '" value="' + esc(p.name || '') + '">' +
+        '<input name="pk_name_' + i + '" aria-label="Nom du point ' + (i+1) + '" placeholder="' + (i === 0 ? 'Ex. LGD Paris – Rungis' : 'Ex. Paris, Porte Maillot') + '" value="' + esc(p.name || '') + '">' +
         '<input name="pk_addr_' + i + '" aria-label="Adresse du point ' + (i+1) + '" placeholder="Adresse" value="' + esc(p.address || '') + '">' +
         '<input name="pk_time_' + i + '" type="time" aria-label="Heure du point ' + (i+1) + '" value="' + esc(p.time || '') + '"></div>';
     }
