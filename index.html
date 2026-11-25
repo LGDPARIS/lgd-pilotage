@@ -1162,7 +1162,7 @@ tr.click{ cursor:pointer; } tr.click:hover td{ background:var(--surface-2); }
       pausesRetour: rows('pr', MAX_PAUSES)
     };
   }
-  function driverLink(d){ return 'https://excursions.lgdparis.com/chauffeur/?d=' + encodeURIComponent(d.id) + '&t=' + encodeURIComponent((d.chauffeur || {}).token || ''); }
+  function driverLink(d){ return 'https://lgdparis.github.io/lgd-excursions/chauffeur/?d=' + encodeURIComponent(d.id) + '&t=' + encodeURIComponent((d.chauffeur || {}).token || ''); }
   function newToken(){ var a = new Uint8Array(18); (window.crypto || window.msCrypto).getRandomValues(a); return Array.prototype.map.call(a, function(x){ return ('0' + x.toString(16)).slice(-2); }).join(''); }
   function copyDriverLink(d){
     var go = function(dd){
