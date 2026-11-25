@@ -284,7 +284,7 @@ tr.click{ cursor:pointer; } tr.click:hover td{ background:var(--surface-2); }
   var S = {
     view: 'departs', depId: null,
     excursions: [], departures: [], bookings: [],
-    clients: [], campaigns: [],
+    clients: [], campaigns: [], prospects: [], prospectsOff: false,
     loaded: { excursions:false, departures:false, bookings:false, clients:false, campaigns:false },
     status: 'loading',
     canWrite: true, showPast: false,
@@ -415,6 +415,16 @@ tr.click{ cursor:pointer; } tr.click:hover td{ background:var(--surface-2); }
   }
   function saveDoc(name, id, data){ if(!db) return Promise.reject({ code:'unavailable' }); var r = id ? col(name).doc(id) : col(name).doc(); return r.set(data).then(function(){ return r.id; }); }
   function delDoc(name, id){ return col(name).doc(id).delete(); }
+  // Prospects intéressés (formulaire « Être prévenu » du site, 25/11/2026) : chargés à part,
+  // une erreur de lecture n'empêche jamais l'outil de fonctionner.
+  function subscribeProspects(){
+    try{
+      col('prospects').onSnapshot(function(snap){
+        S.prospects = snap.docs.map(function(d){ return Object.assign({}, d.data() || {}, { id: d.id }); }); S.prospectsOff = false;
+        if(S.status === 'ready') render();
+      }, function(){ S.prospects = []; S.prospectsOff = true; if(S.status === 'ready') render(); });
+    }catch(e){ S.prospectsOff = true; }
+  }
   function subscribe(name){
     col(name).onSnapshot(function(snap){
       try{
@@ -463,7 +473,7 @@ tr.click{ cursor:pointer; } tr.click:hover td{ background:var(--surface-2); }
         db = firebase.firestore();
         S.status = 'loading'; render();
         boot._timer = setTimeout(function(){ if(S.status === 'loading'){ S.status = 'error'; render(); } }, 15000);
-        ['excursions','departures','bookings','clients','campaigns'].forEach(subscribe);
+        ['excursions','departures','bookings','clients','campaigns'].forEach(subscribe); subscribeProspects();
       });
     }).catch(function(){ S.status = 'error'; render(); });
   }
@@ -473,7 +483,7 @@ tr.click{ cursor:pointer; } tr.click:hover td{ background:var(--surface-2); }
     if(!window.claude || !window.claude.use){ S.status = 'nodb'; clearTimeout(boot._timer); render(); return; }
     window.claude.use('db').then(function(d){
       if(!d){ S.status = 'nodb'; clearTimeout(boot._timer); render(); return; }
-      db = d; ['excursions','departures','bookings','clients','campaigns'].forEach(subscribe);
+      db = d; ['excursions','departures','bookings','clients','campaigns'].forEach(subscribe); subscribeProspects();
     }).catch(function(){ S.status = 'nodb'; clearTimeout(boot._timer); render(); });
     window.claude.use('downloads').then(function(d){ downloads = d; if(S.status === 'ready') render(); }).catch(function(){});
     window.claude.use('user').then(function(u){ if(u && u.can) Promise.resolve(u.can('data.write')).then(function(v){ if(v === false){ S.canWrite = false; render(); } }); }).catch(function(){});
@@ -653,8 +663,16 @@ tr.click{ cursor:pointer; } tr.click:hover td{ background:var(--surface-2); }
       if(n != null && n <= -1){ c.traveled++; if(d.date > c.lastTrip) c.lastTrip = d.date; var e = exc(d.excursionId); if(e) c.dests[e.id] = e.name; }
       else c.upcoming++;
     });
+    S.prospects.forEach(function(p){
+      var k = String(p.email || '').trim().toLowerCase(); if(!k) return;
+      var id = clientDocId(k);
+      var c = map[id] || (map[id] = { id:id, key:k, name:((p.prenom||'') + ' ' + (p.nom||'')).trim(), email:p.email, phone:p.telephone||'', bookings:[], traveled:0, upcoming:0, spent:0, pax:0, lastTrip:'', firstAt:p.createdAt||'', firstSource:p.source||'Site – Être prévenu', dests:{}, optOutBk:false, latest:p.updatedAt||'' });
+      c.prospect = p; c.interets = p.interets || []; c.interetsSlugs = p.excursions || [];
+      if(!c.phone && p.telephone) c.phone = p.telephone;
+    });
     return Object.keys(map).map(function(id){
       var c = map[id], r = crec(id) || {};
+      c.isClient = c.bookings.length > 0; c.interets = c.interets || []; c.interetsSlugs = c.interetsSlugs || [];
       c.rec = r; c.optOutEmail = !!r.optOutEmail || c.optOutBk; c.optOutSms = !!r.optOutSms || c.optOutBk;
       c.satisfaction = num(r.satisfaction);
       c.lastActivity = c.lastTrip || String(c.latest || '').slice(0,10);
@@ -668,14 +686,17 @@ tr.click{ cursor:pointer; } tr.click:hover td{ background:var(--surface-2); }
     var list = [
       ['voyage','Ont voyagé', function(c){ return c.traveled >= 1; }],
       ['fideles','Fidèles (2 excursions ou plus)', function(c){ return c.traveled >= 2; }],
-      ['avenir','Pas encore partis', function(c){ return c.traveled === 0; }],
+      ['avenir','Pas encore partis', function(c){ return c.isClient && c.traveled === 0; }],
       ['inactifs','Sans voyage depuis 6 mois', function(c){ return c.traveled >= 1 && c.sinceLast > 180; }],
       ['satisfaits','Très satisfaits (4 ou 5 sur 5)', function(c){ return c.satisfaction >= 4; }]
     ];
     S.excursions.forEach(function(e){ list.push(['dest:' + e.id, 'Déjà allés à ' + e.name, function(c){ return !!c.dests[e.id]; }]); });
-    list.push(['tous','Tous les clients', function(){ return true; }]);
+    list.push(['tous','Tous les clients', function(c){ return c.isClient; }]);
+    list.push(['prospects','Prospects intéressés (tous)', function(c){ return !!c.prospect; }]);
+    Object.keys(PROSPECT_LABELS).forEach(function(k){ list.push(['pi:' + k, 'Prospects intéressés : ' + PROSPECT_LABELS[k], function(c){ return c.interetsSlugs.indexOf(k) >= 0; }]); });
     return list;
   }
+  var PROSPECT_LABELS = { 'mont-saint-michel':'Mont Saint-Michel', 'honfleur-etretat':'Honfleur & Étretat', 'love-and-trip':'Love & Trip', 'chateaux-loire':'Châteaux de la Loire', 'plages-normandie':'Plages de Normandie', 'gourmet-city-tour':'Gourmet City Tour', 'strasbourg':'Strasbourg', 'bruges':'Bruges', 'amsterdam':'Amsterdam', 'autres':'Autres idées' };
   function segOf(id){ return segments().filter(function(x){ return x[0] === id; })[0] || segments()[0]; }
   function segFn(id){ return segOf(id)[2]; }
   function segLabel(id){ return segOf(id)[1]; }
@@ -687,11 +708,13 @@ tr.click{ cursor:pointer; } tr.click:hover td{ background:var(--surface-2); }
     var fid = traveled.filter(function(c){ return c.traveled >= 2; });
     var mailable = reachable(traveled, 'email');
     var olds = all.filter(function(c){ return c.old; });
-    var h = '<div class="head"><div><h1>Clients</h1><p class="muted">Chaque voyageur entre dans la base le lendemain de son excursion, quand part la demande d’avis.</p></div><div class="row">' + (downloads ? '<button type="button" class="btn" data-act="cl-export"' + (all.length ? '' : ' disabled') + '>Exporter ce segment (CSV)</button>' : '') + '<button type="button" class="btn primary" data-act="camp-new"' + dis() + '>Créer une campagne</button></div></div>';
-    h += '<div class="kpis">' + kpi(traveled.length, 'clients ayant voyagé') + kpi(mailable.length, 'joignables par e-mail') + kpi(fid.length, 'clients fidèles') + kpi(traveled.length ? money(traveled.reduce(function(s,c){ return s + c.spent; }, 0) / traveled.length) : '—', 'dépensé en moyenne par client') + '</div>';
+    var h = '<div class="head"><div><h1>Clients</h1><p class="muted">Chaque voyageur entre dans la base le lendemain de son excursion, quand part la demande d’avis. Les prospects intéressés viennent du formulaire « Être prévenu » du site.</p></div><div class="row">' + (downloads ? '<button type="button" class="btn" data-act="cl-export"' + (all.length ? '' : ' disabled') + '>Exporter ce segment (CSV)</button>' : '') + '<button type="button" class="btn primary" data-act="camp-new"' + dis() + '>Créer une campagne</button></div></div>';
+    var nProsp = all.filter(function(c){ return c.prospect && !c.isClient; }).length;
+    h += '<div class="kpis">' + kpi(nProsp, 'prospects intéressés') + kpi(traveled.length, 'clients ayant voyagé') + kpi(mailable.length, 'joignables par e-mail') + kpi(fid.length, 'clients fidèles') + kpi(traveled.length ? money(traveled.reduce(function(s,c){ return s + c.spent; }, 0) / traveled.length) : '—', 'dépensé en moyenne par client') + '</div>';
+    if(S.prospectsOff) h += '<div class="note warn banner">Les prospects intéressés (formulaire « Être prévenu » du site) ne peuvent pas être lus : autorisez la lecture de la collection « prospects » dans les règles Firestore.</div>';
     if(olds.length) h += '<div class="note warn banner">' + plural(olds.length, 'client') + ' sans activité depuis plus de 3 ans : la CNIL recommande d’effacer leurs données (bouton « Effacer ses données » dans la fiche).</div>';
     if(!all.length) return h + '<div class="card empty"><p class="muted">La base est vide pour l’instant. Les clients apparaîtront ici après leur première excursion. Chargez la démo pour voir un exemple.</p></div>';
-    h += '<div class="chips" role="group" aria-label="Segments">' + segments().map(function(s){ var n = all.filter(s[2]).length; return '<button type="button" class="chip" data-act="seg" data-seg="' + esc(s[0]) + '" aria-pressed="' + (S.seg === s[0]) + '">' + esc(s[1]) + '<span class="c">' + n + '</span></button>'; }).join('') + '</div>';
+    h += '<div class="chips" role="group" aria-label="Segments">' + segments().map(function(s){ var n = all.filter(s[2]).length; if(!n && s[0].indexOf('pi:') === 0 && S.seg !== s[0]) return ''; return '<button type="button" class="chip" data-act="seg" data-seg="' + esc(s[0]) + '" aria-pressed="' + (S.seg === s[0]) + '">' + esc(s[1]) + '<span class="c">' + n + '</span></button>'; }).join('') + '</div>';
     var q = S.cq.trim().toLowerCase();
     var list = all.filter(segFn(S.seg)).filter(function(c){ return !q || (c.name + ' ' + c.email + ' ' + c.phone).toLowerCase().indexOf(q) >= 0; });
     h += '<div class="filters" role="search"><input type="search" id="c-q" placeholder="Rechercher un client" aria-label="Rechercher un client" value="' + esc(S.cq) + '"></div>';
@@ -700,7 +723,7 @@ tr.click{ cursor:pointer; } tr.click:hover td{ background:var(--surface-2); }
       list.map(function(c){
         var dests = Object.keys(c.dests).map(function(k){ return c.dests[k]; }).join(', ');
         return '<tr class="click" data-act="cl-open" data-id="' + esc(c.id) + '"><td><button type="button" class="namebtn" data-act="cl-open" data-id="' + esc(c.id) + '">' + esc(c.name) + '</button>' + (c.isDemo ? ' <span class="tag">DÉMO</span>' : '') + '<div class="muted small">' + esc(c.email || c.phone || '') + '</div></td>' +
-          '<td>' + c.traveled + (c.upcoming ? ' <span class="muted small">+' + c.upcoming + ' à venir</span>' : '') + '<div class="muted small">' + esc(dests || '—') + '</div></td>' +
+          (c.isClient ? '<td>' + c.traveled + (c.upcoming ? ' <span class="muted small">+' + c.upcoming + ' à venir</span>' : '') + '<div class="muted small">' + esc(dests || '—') + '</div>' + (c.interets.length ? '<div class="muted small">Intéressé par : ' + esc(c.interets.join(', ')) + '</div>' : '') + '</td>' : '<td><span class="pill neutral">Prospect</span><div class="muted small">Intéressé par : ' + esc(c.interets.join(', ') || '—') + '</div></td>') +
           '<td class="num">' + money(c.spent) + '</td><td>' + (c.lastTrip ? esc(fmtDate(c.lastTrip, { day:'numeric', month:'short', year:'numeric' })) : '—') + '</td><td>' + esc(c.firstSource || '—') + '</td>' +
           '<td>' + (c.satisfaction ? c.satisfaction + ' / 5' : '<span class="muted">—</span>') + '</td>' +
           '<td>' + (c.optOutEmail ? '<span class="pill neutral">Refusées</span>' : (c.email ? '<span class="pill ok">Acceptées</span>' : '<span class="pill neutral">Pas d’e-mail</span>')) + '</td></tr>';
@@ -711,7 +734,8 @@ tr.click{ cursor:pointer; } tr.click:hover td{ background:var(--surface-2); }
     var r = c.rec || {};
     var hist = c.bookings.slice().sort(function(a,b){ return ((dep(b.departureId)||{}).date||'').localeCompare((dep(a.departureId)||{}).date||''); }).map(function(b){ var d = dep(b.departureId) || {}, e = exc(d.excursionId) || {}; return line((e.name || '?') + ' · ' + fmtDate(d.date, { day:'numeric', month:'short', year:'numeric' }) + ' · ' + plural(num(b.qty), 'place') + (b.promoCode ? ' · code ' + b.promoCode : ''), money2(num(b.amount))); }).join('');
     var body = '<div class="lines">' + line('E-mail', esc(c.email || '—')) + line('Téléphone', esc(c.phone || '—')) + line('Client depuis', c.firstAt ? esc(new Date(c.firstAt).toLocaleDateString('fr-FR')) : '—') + line('Venu par', esc(c.firstSource || '—')) + line('Total dépensé', money2(c.spent)) + '</div>' +
-      '<div><h3 style="margin-bottom:4px">Historique</h3><div class="lines">' + hist + '</div></div>' +
+      (c.prospect ? '<div><h3 style="margin-bottom:4px">Prospect intéressé</h3><div class="lines">' + line('Intéressé par', esc(c.interets.join(', ') || '—')) + line('Inscrit le', c.prospect.createdAt ? esc(new Date(c.prospect.createdAt).toLocaleDateString('fr-FR')) : '—') + line('Langue', esc(c.prospect.lang || 'fr')) + (c.prospect.idees || []).map(function(x){ return line('Ses idées (' + esc(new Date(x.date).toLocaleDateString('fr-FR')) + ')', esc(x.texte)); }).join('') + '</div></div>' : '') +
+      (c.isClient ? '<div><h3 style="margin-bottom:4px">Historique</h3><div class="lines">' + hist + '</div></div>' : '') +
       '<fieldset><legend>Offres commerciales</legend>' + (c.optOutBk ? '<p class="muted small" style="margin:0 0 8px">Le client a refusé les offres lors d’une réservation.</p>' : '') +
         '<label class="check"><input type="checkbox" name="optOutEmail"' + (c.optOutEmail ? ' checked' : '') + (c.optOutBk ? ' disabled' : '') + '> Ne plus lui envoyer d’offres par e-mail</label>' +
         '<label class="check" style="margin-top:8px"><input type="checkbox" name="optOutSms"' + (c.optOutSms ? ' checked' : '') + (c.optOutBk ? ' disabled' : '') + '> Ne plus lui envoyer d’offres par SMS</label></fieldset>' +
@@ -732,6 +756,7 @@ tr.click{ cursor:pointer; } tr.click:hover td{ background:var(--surface-2); }
       var chain = Promise.resolve();
       c.bookings.forEach(function(b){ var data = Object.assign({}, b); delete data.id; data.name = 'Client effacé'; data.email = ''; data.phone = ''; data.notes = ''; data.voyageurs = []; data.anonymized = true; data.updatedAt = new Date().toISOString(); chain = chain.then(function(){ return saveDoc('bookings', b.id, data); }); });
       chain = chain.then(function(){ return crec(c.id) ? delDoc('clients', c.id) : null; });
+      chain = chain.then(function(){ return c.prospect ? delDoc('prospects', c.prospect.id) : null; });
       chain.then(function(){ toast('Données du client effacées'); }).catch(writeErr);
     });
   }
@@ -811,10 +836,10 @@ tr.click{ cursor:pointer; } tr.click:hover td{ background:var(--surface-2); }
   }
   function slug(s){ return String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,''); }
   function clientRows(list){
-    return [['EMAIL','PRENOM','NOM','SMS','NB_EXCURSIONS','DERNIERE_EXCURSION','DESTINATIONS','DEPENSE','SOURCE','OFFRES_EMAIL','OFFRES_SMS']].concat(list.map(function(c){
+    return [['EMAIL','PRENOM','NOM','SMS','NB_EXCURSIONS','DERNIERE_EXCURSION','DESTINATIONS','DEPENSE','SOURCE','OFFRES_EMAIL','OFFRES_SMS','INTERETS']].concat(list.map(function(c){
       var parts = String(c.name || '').trim().split(/\s+/), prenom = parts.shift() || '', nom = parts.join(' ');
       var tel = String(c.phone || '').replace(/\s+/g, ''); if(/^0[67]\d{8}$/.test(tel)) tel = '+33' + tel.slice(1);
-      return [c.email, prenom, nom, tel, c.traveled, c.lastTrip, Object.keys(c.dests).map(function(k){ return c.dests[k]; }).join(' / '), c.spent.toFixed(2).replace('.', ','), c.firstSource, c.optOutEmail ? 'non' : 'oui', c.optOutSms ? 'non' : 'oui'];
+      return [c.email, prenom, nom, tel, c.traveled, c.lastTrip, Object.keys(c.dests).map(function(k){ return c.dests[k]; }).join(' / '), c.spent.toFixed(2).replace('.', ','), c.firstSource, c.optOutEmail ? 'non' : 'oui', c.optOutSms ? 'non' : 'oui', (c.interets || []).join(' / ')];
     }));
   }
 
