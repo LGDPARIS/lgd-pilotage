@@ -1189,6 +1189,7 @@ tr.click{ cursor:pointer; } tr.click:hover td{ background:var(--surface-2); }
     e = e || { capacity:55, conso:25, fuelPrice:2.30, drivers:1, adsBudget:200, idRequired:false };
     var body = '<div class="fields">' + fld('Nom de l’excursion', 'name', e.name, 'text', ' required') + fld('Prix TTC par personne (€)', 'price', e.price, 'number', ' step="0.01" min="0" required', 'Plein tarif. TVA de 10 % incluse.') + fld('Places dans le car', 'capacity', e.capacity, 'number', ' min="1" max="120"') + fld('Heure de retour prévue', 'returnTime', e.returnTime, 'time') + '</div>' +
       '<div class="fields">' + fld('Prix early bird TTC (€)', 'earlyPrice', e.earlyPrice, 'number', ' step="0.01" min="0"', 'Vide = pas d’early bird.') + fld('Places au prix early bird', 'earlySeats', e.earlySeats, 'number', ' min="0" max="120"', 'Les premières places de chaque départ. Ensuite : plein tarif, automatiquement.') + fld('Early bird jusqu’au (facultatif)', 'earlyUntil', e.earlyUntil, 'date', '', 'Vide = jusqu’à ce que les places early bird soient vendues.') + '</div>' +
+      '<div class="fields">' + fld('Réduction enfant (€)', 'childDiscount', e.childDiscount == null || e.childDiscount === '' ? 15 : e.childDiscount, 'number', ' step="1" min="0"', 'Enfant de moins de 12 ans le jour du départ : prix adulte (early bird ou plein tarif) moins ce montant. 0 = pas de tarif enfant.') + '</div>' +
       pickupsEditor(excPickups(isNew ? null : e)) +
       '<fieldset><legend>Infos pour les voyageurs</legend><div class="fields">' + sel('Pièce d’identité obligatoire', 'idRequired', [['oui','Oui (voyage à l’étranger)'],['non','Non']], e.idRequired ? 'oui' : 'non') + '</div>' +
       '<div class="field" style="margin-top:12px"><label for="f_practical">À prévoir (une ligne par conseil)</label><textarea id="f_practical" name="practical" placeholder="Ex. Un coussin et une petite couverture pour le trajet de nuit">' + esc(e.practical || '') + '</textarea><span class="hint">Repris dans l’e-mail de confirmation et le rappel.</span></div></fieldset>' +
@@ -1207,7 +1208,7 @@ tr.click{ cursor:pointer; } tr.click:hover td{ background:var(--surface-2); }
       if(!fv(form,'name') || !(num(fv(form,'price')) > 0)){ toast('Indiquez au moins un nom et un prix.'); return; }
       var pks = readPickups(form);
       if(!pks.length){ toast('Ajoutez au moins un point de prise en charge.'); return; }
-      var data = { name: fv(form,'name'), price: num(fv(form,'price')), earlyPrice: num(fv(form,'earlyPrice')), earlySeats: Math.round(num(fv(form,'earlySeats'))), earlyUntil: fv(form,'earlyUntil'), capacity: Math.round(num(fv(form,'capacity'),55)), returnTime: fv(form,'returnTime'), pickups: pks,
+      var data = { name: fv(form,'name'), price: num(fv(form,'price')), earlyPrice: num(fv(form,'earlyPrice')), earlySeats: Math.round(num(fv(form,'earlySeats'))), earlyUntil: fv(form,'earlyUntil'), childDiscount: Math.max(0, num(fv(form,'childDiscount'))), capacity: Math.round(num(fv(form,'capacity'),55)), returnTime: fv(form,'returnTime'), pickups: pks,
         idRequired: fv(form,'idRequired') === 'oui', practical: fv(form,'practical'),
         km: num(fv(form,'km')), conso: num(fv(form,'conso')), fuelPrice: num(fv(form,'fuelPrice')), tolls: num(fv(form,'tolls')), driverCost: num(fv(form,'driverCost')), drivers: Math.max(1, Math.round(num(fv(form,'drivers'),1))),
         parking: num(fv(form,'parking')), hotel: num(fv(form,'hotel')), other: num(fv(form,'other')), adsBudget: num(fv(form,'adsBudget')), route: readRoute(form), demo: !!e.demo, updatedAt: new Date().toISOString() };
@@ -1268,7 +1269,9 @@ tr.click{ cursor:pointer; } tr.click:hover td{ background:var(--surface-2); }
 
   // ---------- Voyageurs d'une réservation (un nom et un prénom par voyageur, décision du 19/11/2026) ----------
   function voyList(b){ return Array.isArray(b.voyageurs) ? b.voyageurs : []; }
-  function voyLabel(v){ return [String(v.prenom || '').trim(), String(v.nom || '').trim().toUpperCase()].filter(Boolean).join(' '); }
+  // Âge en années révolues le jour du départ (tarif enfant : moins de 12 ans, décision du 27/11/2026)
+  function ageAt(birth, day){ var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(birth || '')), d = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(day || '')); if(!m || !d) return NaN; var a = +d[1] - +m[1]; if(+d[2] < +m[2] || (d[2] === m[2] && +d[3] < +m[3])) a--; return a; }
+  function voyLabel(v){ return [String(v.prenom || '').trim(), String(v.nom || '').trim().toUpperCase()].filter(Boolean).join(' ') + (v.enfant ? ' (enfant' + (v.dateNaissance ? ', né(e) le ' + String(v.dateNaissance).split('-').reverse().join('/') : '') + ')' : ''); }
   function voyCell(b){ var vs = voyList(b); if(!vs.length) return ''; return '<div class="muted small" style="margin-top:4px">' + vs.map(function(v, i){ return (i + 1) + '. ' + esc(voyLabel(v)) + (v.telephone && !v.coordonneesReservant ? ' · ' + esc(v.telephone) : ''); }).join('<br>') + '</div>'; }
   function voyFields(list, qty){
     var h = '';
@@ -1276,7 +1279,8 @@ tr.click{ cursor:pointer; } tr.click:hover td{ background:var(--surface-2); }
       var v = list[i] || {}, own = v.coordonneesReservant === false;
       h += '<p class="muted small" style="margin:10px 0 0;font-weight:700">Voyageur ' + (i + 1) + (i === 0 ? ' (la personne qui réserve, si elle voyage)' : '') + '</p>' +
         '<div class="fields">' + fld('Nom', 'v_nom_' + i, v.nom, 'text', ' autocomplete="off"') + fld('Prénom', 'v_prenom_' + i, v.prenom, 'text', ' autocomplete="off"') + '</div>' +
-        '<div class="fields">' + fld('Téléphone', 'v_tel_' + i, own ? v.telephone : '', 'tel', ' autocomplete="off"', 'Vide = celui de la réservation.') + fld('E-mail', 'v_email_' + i, own ? v.email : '', 'email', ' autocomplete="off"', 'Vide = celui de la réservation.') + '</div>';
+        '<div class="fields">' + fld('Téléphone', 'v_tel_' + i, own ? v.telephone : '', 'tel', ' autocomplete="off"', 'Vide = celui de la réservation.') + fld('E-mail', 'v_email_' + i, own ? v.email : '', 'email', ' autocomplete="off"', 'Vide = celui de la réservation.') + '</div>' +
+        (i > 0 ? '<div class="fields"><label class="check"><input type="checkbox" name="v_enfant_' + i + '"' + (v.enfant ? ' checked' : '') + '> Enfant de moins de 12 ans le jour du départ (tarif enfant)</label>' + fld('Date de naissance de l’enfant', 'v_naiss_' + i, v.dateNaissance || '', 'date', '') + '</div>' : '');
     }
     return h;
   }
@@ -1306,24 +1310,30 @@ tr.click{ cursor:pointer; } tr.click:hover td{ background:var(--surface-2); }
         var vn = fv(form, 'v_nom_' + vi), vp = fv(form, 'v_prenom_' + vi), vt = fv(form, 'v_tel_' + vi), ve = fv(form, 'v_email_' + vi);
         if(!vn || !vp){ toast('Indiquez le nom et le prénom du voyageur ' + (vi + 1) + '.'); return; }
         var same = !vt && !ve;
-        voyageurs.push({ nom: vn, prenom: vp, telephone: vt || fv(form,'phone'), email: (ve || fv(form,'email')).toLowerCase(), coordonneesReservant: same });
+        var ve2 = vi > 0 && form.elements['v_enfant_' + vi] && form.elements['v_enfant_' + vi].checked, vd = ve2 ? fv(form, 'v_naiss_' + vi) : '';
+        if(ve2 && !vd){ toast('Indiquez la date de naissance de l’enfant (voyageur ' + (vi + 1) + ').'); return; }
+        var dd = dep(fv(form,'departureId'));
+        if(ve2 && dd && ageAt(vd, dd.date) >= 12){ toast('Le voyageur ' + (vi + 1) + ' aura 12 ans ou plus le jour du départ : pas de tarif enfant.'); return; }
+        voyageurs.push({ nom: vn, prenom: vp, telephone: vt || fv(form,'phone'), email: (ve || fv(form,'email')).toLowerCase(), coordonneesReservant: same, enfant: !!ve2, dateNaissance: vd });
       }
       var d = dep(fv(form,'departureId')); var s = d ? stats(d) : null;
       var already = (!isNew && b.departureId === fv(form,'departureId') && b.status === 'payee') ? num(b.qty) : 0;
       if(s && fv(form,'status') === 'payee' && s.pax - already + qty > s.cap){ toast('Pas assez de places : il en reste ' + Math.max(0, s.cap - s.pax + already) + '.'); return; }
       var data = { departureId: fv(form,'departureId'), pickupId: fv(form,'pickupId'), name: fv(form,'name'), phone: fv(form,'phone'), email: fv(form,'email'), qty: qty, voyageurs: voyageurs, amount: num(fv(form,'amount')), status: fv(form,'status'), source: fv(form,'source'), notes: fv(form,'notes'),
-        promoCode: fv(form,'promoCode').toUpperCase(), optOut: !!form.elements.optOut.checked, anonymized: !!b.anonymized,
+        placesEnfant: voyageurs.filter(function(v){ return v.enfant; }).length, promoCode: fv(form,'promoCode').toUpperCase(), optOut: !!form.elements.optOut.checked, anonymized: !!b.anonymized,
         createdAt: b.createdAt || new Date().toISOString(), updatedAt: new Date().toISOString(), demo: !!b.demo };
       busy(form,true);
       saveDoc('bookings', isNew ? null : b.id, data).then(function(){ dlg.close(); toast(isNew ? (IS_PROD ? 'Réservation ajoutée' : 'Réservation ajoutée · e-mail de confirmation prêt (simulation)') : 'Réservation enregistrée'); }).catch(function(err){ busy(form,false); writeErr(err); });
     });
-    var recalc = function(){ form.elements.amount.value = (priceOf(form.elements.departureId.value) * Math.max(1, Math.round(num(form.elements.qty.value,1)))).toFixed(2); };
+    var kidOf = function(id){ var d = dep(id); var e = d && exc(d.excursionId); return e ? (e.childDiscount == null || e.childDiscount === '' ? 15 : num(e.childDiscount)) : 0; };
+    var recalc = function(){ var n = Math.max(1, Math.round(num(form.elements.qty.value,1))), u = priceOf(form.elements.departureId.value), k = 0; for(var i = 1; i < n; i++) if(form.elements['v_enfant_' + i] && form.elements['v_enfant_' + i].checked) k++; form.elements.amount.value = (u * n - Math.min(kidOf(form.elements.departureId.value), Math.max(0, u - 1)) * k).toFixed(2); };
     form.elements.qty.addEventListener('input', recalc);
+    form.addEventListener('change', function(ev){ if(/^v_enfant_/.test(ev.target.name || '')) recalc(); });
     var vmem = voyList(b).slice();
     form.elements.qty.addEventListener('input', function(){
       var n = Math.min(55, Math.max(1, Math.round(num(form.elements.qty.value, 1))));
-      for(var i = 0; form.elements['v_nom_' + i]; i++){ var t = fv(form, 'v_tel_' + i), m = fv(form, 'v_email_' + i); vmem[i] = { nom: fv(form, 'v_nom_' + i), prenom: fv(form, 'v_prenom_' + i), telephone: t, email: m, coordonneesReservant: !t && !m }; }
-      document.getElementById('voy-box').innerHTML = voyFields(vmem, n);
+      for(var i = 0; form.elements['v_nom_' + i]; i++){ var t = fv(form, 'v_tel_' + i), m = fv(form, 'v_email_' + i); vmem[i] = { nom: fv(form, 'v_nom_' + i), prenom: fv(form, 'v_prenom_' + i), telephone: t, email: m, coordonneesReservant: !t && !m, enfant: !!(form.elements['v_enfant_' + i] && form.elements['v_enfant_' + i].checked), dateNaissance: form.elements['v_naiss_' + i] ? fv(form, 'v_naiss_' + i) : '' }; }
+      document.getElementById('voy-box').innerHTML = voyFields(vmem, n); recalc();
     });
     form.elements.departureId.addEventListener('change', function(){ recalc(); document.getElementById('pk-sel').innerHTML = sel('Point de prise en charge', 'pickupId', pkOptions(this.value), ''); });
   }
